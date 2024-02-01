@@ -20,9 +20,8 @@ import java.io.IOException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 
 /**
@@ -34,7 +33,7 @@ public class MatchingTreeWalker {
     private final Path start;
     private final MatchingFileVisitor visitor;
     private int maxDepth;
-    private final Set<FileVisitOption> fileVisitOptions;
+    private final EnumSet<FileVisitOption> fileVisitOptions;
 
     public MatchingTreeWalker(final Path start, final MatchHandler matchHandler, final String... matchPatterns) {
         this(start, matchHandler, List.of(matchPatterns));
@@ -44,7 +43,7 @@ public class MatchingTreeWalker {
         this.start = start;
         this.visitor = new MatchingFileVisitor(matchHandler, matchPatterns);
         this.maxDepth = Integer.MAX_VALUE;
-        this.fileVisitOptions = new HashSet<>();
+        this.fileVisitOptions = EnumSet.allOf(FileVisitOption.class);
     }
 
     public MatchingTreeWalker excludeHidden(final boolean excludeHidden) {

@@ -90,4 +90,8 @@ final class GitUtils {
         final Path ignoreFile = dir.resolve(GITIGNORE);
         return Files.isReadable(ignoreFile) ? ignoreFile : null;
     }
+
+    static String expandTilde(final String path) {
+        return (path.startsWith("~/")) ? PathUtils.HOME_DIR + path.substring(1) : path;
+    }
 }

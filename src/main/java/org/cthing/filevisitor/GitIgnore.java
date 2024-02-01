@@ -145,7 +145,7 @@ final class GitIgnore {
             final GitConfig config = new GitConfig(configFile);
             final String excludesFile = config.getString("core", "excludesFile");
             if (excludesFile != null) {
-                final Path excludePath = Path.of(PathUtils.expandTilda(excludesFile));
+                final Path excludePath = Path.of(GitUtils.expandTilde(excludesFile));
                 final Path parent = excludePath.getParent();
                 assert parent != null;
                 return new GitIgnore(parent, excludePath);
