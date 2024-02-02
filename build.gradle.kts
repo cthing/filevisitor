@@ -122,6 +122,9 @@ tasks {
 
     withType<Test> {
         useJUnitPlatform()
+
+        systemProperty("cthing.filevisitor.home", File(temporaryDir, "home"))
+        environment("XDG_CONFIG_HOME", File(temporaryDir, "home/xdg"))
     }
 
     withType<GenerateModuleMetadata> {

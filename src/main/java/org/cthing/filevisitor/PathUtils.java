@@ -26,7 +26,9 @@ import org.cthing.annotations.NoCoverageGenerated;
  */
 final class PathUtils {
 
-    static final String HOME_DIR = System.getProperty("user.home");
+    static final String HOME_DIR = System.getProperty("cthing.filevisitor.home") == null
+                                   ? System.getProperty("user.home")
+                                   : System.getProperty("cthing.filevisitor.home");
     static final Path HOME_PATH = Path.of(HOME_DIR);
 
     @NoCoverageGenerated

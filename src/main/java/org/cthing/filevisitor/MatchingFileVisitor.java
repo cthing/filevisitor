@@ -42,7 +42,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
 
     private static final class Context {
         boolean workTree;
-        List<GitIgnore> ignores;
+        final List<GitIgnore> ignores;
 
         Context() {
             this.ignores = new ArrayList<>();

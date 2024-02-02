@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
 
@@ -328,7 +329,11 @@ final class Glob {
         final Parser parser = new Parser(this.pattern);
         final List<Token> tokens = parser.parse();
 
-        this.matcher = Objects.requireNonNullElseGet(literalMatcher(tokens), () -> regexMatcher(tokens));
+        Matcher m = literalMatcher(tokens);
+        if (m == null) {
+            m = regexMatcher(tokens);
+        }
+        this.matcher = m;
     }
 
     /**
@@ -366,12 +371,12 @@ final class Glob {
         return buffer.isEmpty() ? null : new LiteralMatcher(buffer.toString());
     }
 
-    private Matcher regexMatcher(final List<Token> tokens) {
+    private Matcher regexMatcher(final List<Token> tokens) throws MatchingException {
         final Pattern regex = tokensToRegex(tokens);
         return new RegexMatcher(regex);
     }
 
-    private Pattern tokensToRegex(final List<Token> tokens) {
+    private Pattern tokensToRegex(final List<Token> tokens) throws MatchingException {
         final StringBuilder buffer = new StringBuilder();
 
         // Disable Unicode-aware case folding
@@ -391,7 +396,7 @@ final class Glob {
 
         for (final Token token : tokens) {
             switch (token.type) {
-                case Literal -> buffer.append(escapeRegex(token.ch));
+                case Literal -> buffer.append(RegexUtils.escape(token.ch));
                 case Any -> buffer.append("[^/]");
                 case ZeroOrMore -> buffer.append("[^/]*");
                 case RecursivePrefix -> buffer.append("(?:/?|.*/)");
@@ -404,11 +409,11 @@ final class Glob {
                     }
                     for (final CharRange range : token.ranges) {
                         if (range.start == range.end) {
-                            buffer.append(escapeRegexCharClass(range.start));
+                            buffer.append(RegexUtils.escapeCharClass(range.start));
                         } else {
-                            buffer.append(escapeRegexCharClass(range.start))
+                            buffer.append(RegexUtils.escapeCharClass(range.start))
                                   .append('-')
-                                  .append(escapeRegexCharClass(range.end));
+                                  .append(RegexUtils.escapeCharClass(range.end));
                         }
                     }
                     buffer.append(']');
@@ -419,21 +424,11 @@ final class Glob {
 
         buffer.append('$');
 
-        return Pattern.compile(buffer.toString());
-    }
-
-    private String escapeRegex(final char ch) {
-        return switch (ch) {
-            case '^', '$', '.', '|', '?', '*', '+', '(', ')', '[', ']', '{', '}' -> "\\" + ch;
-            default -> (ch < 32 || ch > 126) ? String.format("\\u04%x", (int)ch) : String.valueOf(ch);
-        };
-    }
-
-    private String escapeRegexCharClass(final char ch) {
-        return switch (ch) {
-            case '^', '[', ']' -> "\\" + ch;
-            default -> (ch < 32 || ch > 126) ? String.format("\\u04%x", (int)ch) : String.valueOf(ch);
-        };
+        try {
+            return Pattern.compile(buffer.toString());
+        } catch (final PatternSyntaxException ex) {
+            throw new MatchingException("Could not create regular expression for pattern: " + this.pattern, ex);
+        }
     }
 
     @Override
