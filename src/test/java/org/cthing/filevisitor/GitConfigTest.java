@@ -130,8 +130,10 @@ public class GitConfigTest {
             assertThat(config.getString("user", "name")).isEqualTo("C Thing Software");
             assertThat(config.getString("user", "username")).isEqualTo("cthing");
             assertThat(config.getString("user", "email")).isEqualTo("cthing@foobar.com");
+            assertThat(config.getBoolean("user", "aligned", false)).isTrue();
             assertThat(config.getString("user", "junk")).isNull();
             assertThat(config.getString("missing", "email")).isNull();
+            assertThat(config.getBoolean("missing", "email", true)).isTrue();
         }
 
         @Test
@@ -164,7 +166,8 @@ public class GitConfigTest {
         @Test
         public void testKeyOnly() throws MatchingException {
             final GitConfig config = new GitConfig(configFile("key-only.txt"));
-            assertThat(config.getString("user", "foo")).isNull();
+            assertThat(config.getString("user", "foo")).isEmpty();
+            assertThat(config.getBoolean("user", "foo", false)).isTrue();
         }
 
         @Test

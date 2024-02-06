@@ -31,6 +31,45 @@ final class StringUtils {
     }
 
     /**
+     * Obtains the boolean value of the specified string. In keeping with the
+     * <a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-boolean">Git config boolean</a>
+     * documentation, the following strings are considered {@code true}:
+     * <ul>
+     *     <li>true</li>
+     *     <li>yes</li>
+     *     <li>on</li>
+     *     <li>1</li>
+     * </ul>
+     * and the following string are considered {@code false}:
+     * <ul>
+     *     <li>false</li>
+     *     <li>no</li>
+     *     <li>off</li>
+     *     <li>0</li>
+     * </ul>
+     * Any other string will throw an {@code IllegalArgumentException}.
+     *
+     * @param value String representation of a boolean value
+     * @return Boolean value corresponding to the specified string value
+     * @throws IllegalArgumentException if the string is not one of the expected boolean representations.
+     */
+    static boolean toBoolean(final String value) {
+        if ("true".equalsIgnoreCase(value)
+                || "yes".equalsIgnoreCase(value)
+                || "on".equalsIgnoreCase(value)
+                || "1".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)
+                || "no".equalsIgnoreCase(value)
+                || "off".equalsIgnoreCase(value)
+                || "0".equalsIgnoreCase(value)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Invalid boolean string value");
+    }
+
+    /**
      * Indicates whether the two specified string are equal without regard to case. This method accepts {@code null}
      * arguments.
      *
@@ -39,7 +78,7 @@ final class StringUtils {
      * @return {@code true} if the specified string are equal without regard to case.
      */
     @SuppressWarnings("StringEquality")
-    public static boolean equalsIgnoreCase(@Nullable final String str1, @Nullable final String str2) {
+    static boolean equalsIgnoreCase(@Nullable final String str1, @Nullable final String str2) {
         if (str1 == str2) {
             return true;
         }

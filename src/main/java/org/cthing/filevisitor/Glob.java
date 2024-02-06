@@ -27,6 +27,8 @@ import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
 
+import org.cthing.annotations.AccessForTesting;
+
 
 /**
  * Represents a glob matching pattern. Though they may look similar, a glob pattern differs from an ignore pattern.
@@ -34,13 +36,23 @@ import javax.annotation.Nullable;
  */
 final class Glob {
 
+    /**
+     * Lexical type for parsed glob patterns.
+     */
     private enum TokenType {
+        /** A character literal (e.g. "a"). */
         Literal,
+        /** Any single character (i.e. "?"). */
         Any,
+        /** Zero or more characters (i.e. "*"). */
         ZeroOrMore,
+        /** Any directory path prefix (i.e. "{@literal **}/"). */
         RecursivePrefix,
+        /** Any directory path suffix (i.e. "/{@literal **}"). */
         RecursiveSuffix,
-        RecursiceZeroOrMore,
+        /** Any directory path within a pattern (e.g. "a/{@literal **}/b"). */
+        RecursiveZeroOrMore,
+        /** A character class (e.g. [f-h]). */
         CharClass
     }
 
@@ -95,7 +107,8 @@ final class Glob {
         }
     }
 
-    private static class Token {
+    @AccessForTesting
+    static class Token {
 
         final TokenType type;
         final char ch;
@@ -124,7 +137,8 @@ final class Glob {
         }
     }
 
-    private static class Parser {
+    @AccessForTesting
+    static class Parser {
 
         private final StringIterator iterator;
         private final LinkedList<Token> tokens;
@@ -209,7 +223,7 @@ final class Glob {
                 if (suffix) {
                     this.tokens.addLast(new Token(TokenType.RecursiveSuffix));
                 } else {
-                    this.tokens.addLast(new Token(TokenType.RecursiceZeroOrMore));
+                    this.tokens.addLast(new Token(TokenType.RecursiveZeroOrMore));
                 }
             }
         }
@@ -391,7 +405,7 @@ final class Glob {
                 case ZeroOrMore -> buffer.append("[^/]*");
                 case RecursivePrefix -> buffer.append("(?:/?|.*/)");
                 case RecursiveSuffix -> buffer.append("/.*");
-                case RecursiceZeroOrMore -> buffer.append("(?:/|/.*/)");
+                case RecursiveZeroOrMore -> buffer.append("(?:/|/.*/)");
                 case CharClass -> {
                     buffer.append('[');
                     if (token.negated) {

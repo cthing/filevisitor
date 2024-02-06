@@ -168,6 +168,45 @@ final class GitConfig {
     }
 
     /**
+     * Obtains a boolean value with the specified name in the specified section.
+     *
+     * @param section Section of the configuration in which to find the value
+     * @param name Name of the value within the specified section
+     * @param defaultValue Value to return if the item was not found
+     * @return {@code true} if an entry is found with a value of "true", "on", "yes" or "1", or if an entry
+     *      is not found and the default value is {@code true}. Returns {@code false} if an entry is found
+     *      with a value of "false", "off", "no" or "0", or if an entry is not found and the default value
+     *      is {@code false}.
+     */
+    boolean getBoolean(final String section, final String name, final boolean defaultValue) {
+        return getBoolean(section, null, name, defaultValue);
+    }
+
+    /**
+     * Obtains a boolean value with the specified name in the specified section and subsection.
+     *
+     * @param section Section of the configuration in which to find the value
+     * @param subsection Subsection of the configuration section in which to find the value
+     * @param name Name of the value within the specified section
+     * @param defaultValue Value to return if the item was not found
+     * @return {@code true} if an entry is found with a value of "true", "on", "yes" or "1", or if an entry
+     *      is not found and the default value is {@code true}. Returns {@code false} if an entry is found
+     *      with a value of "false", "off", "no" or "0", or if an entry is not found and the default value
+     *      is {@code false}.
+     */
+    boolean getBoolean(final String section, @Nullable final String subsection, final String name,
+                       final boolean defaultValue) {
+        final String valueStr = getString(section, subsection, name);
+        if (valueStr == null) {
+            return defaultValue;
+        }
+        if (valueStr.isEmpty()) {
+            return true;
+        }
+        return StringUtils.toBoolean(valueStr);
+    }
+
+    /**
      * A Git configuration can have multiple entries for the same key in the same section and subsection. This
      * method obtains all values matching the specified section, subsection and key name.
      *
@@ -312,7 +351,7 @@ final class GitConfig {
                 configLine.name = readKeyName(iterator);
                 if (configLine.name.endsWith("\n")) {
                     configLine.name = configLine.name.substring(0, configLine.name.length() - 1);
-                    configLine.value = null;
+                    configLine.value = "";
                 } else {
                     configLine.value = readValue(iterator);
                 }
@@ -344,7 +383,7 @@ final class GitConfig {
             throw new MatchingException("Too many include recursions");
         }
 
-        if (!"path".equalsIgnoreCase(configLine.name) || configLine.value == null) {
+        if (!"path".equalsIgnoreCase(configLine.name) || configLine.value == null || configLine.value.isEmpty()) {
             throw new MatchingException("Invalid line in config file: " + configLine);
         }
 

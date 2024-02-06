@@ -25,10 +25,32 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 
 public class StringUtilsTest {
+
+    public void testToBoolean() {
+        assertThat(StringUtils.toBoolean("true")).isTrue();
+        assertThat(StringUtils.toBoolean("TRUE")).isTrue();
+        assertThat(StringUtils.toBoolean("yes")).isTrue();
+        assertThat(StringUtils.toBoolean("Yes")).isTrue();
+        assertThat(StringUtils.toBoolean("on")).isTrue();
+        assertThat(StringUtils.toBoolean("1")).isTrue();
+
+        assertThat(StringUtils.toBoolean("false")).isFalse();
+        assertThat(StringUtils.toBoolean("FALSE")).isFalse();
+        assertThat(StringUtils.toBoolean("no")).isFalse();
+        assertThat(StringUtils.toBoolean("No")).isFalse();
+        assertThat(StringUtils.toBoolean("off")).isFalse();
+        assertThat(StringUtils.toBoolean("0")).isFalse();
+
+        assertThatIllegalArgumentException().isThrownBy(() -> StringUtils.toBoolean(""));
+        assertThatIllegalArgumentException().isThrownBy(() -> StringUtils.toBoolean("foo"));
+        assertThatIllegalArgumentException().isThrownBy(() -> StringUtils.toBoolean("2"));
+        assertThatIllegalArgumentException().isThrownBy(() -> StringUtils.toBoolean("fals"));
+    }
 
     public static Stream<Arguments> equalsProvider() {
         final String s = "foo";
