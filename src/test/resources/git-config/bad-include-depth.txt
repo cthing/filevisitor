@@ -1,0 +1,5 @@
+[core]
+	filemode = false
+
+[include]
+	path = bad-include-depth.txt ; include relative path

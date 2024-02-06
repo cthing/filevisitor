@@ -1,0 +1,5 @@
+[core]
+	filemode = false
+
+[include]
+	junk = included.txt ; include relative path

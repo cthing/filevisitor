@@ -1,0 +1,5 @@
+|asbcd
+[user]
+  name = C Thing Software
+  email = cthing@foobar.com
+  username = cthing

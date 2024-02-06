@@ -19,26 +19,27 @@
 
 package org.cthing.filevisitor;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.Serial;
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.lang3.StringUtils;
+import org.cthing.annotations.AccessForTesting;
+
 
 /**
  * Represents a <a href="https://git-scm.com/docs/git-config#_configuration_file">Git configuration</a>. Typically,
- * the configuration is read from a file such as {@code .gitconfig}.
+ * the configuration is read from a file such as {@code .gitconfig}. This code has been heavily modified and stripped
+ * down from the original JGit
+ * <a href="https://eclipse.googlesource.com/jgit/jgit/+/refs/heads/master/org.eclipse.jgit/src/org/eclipse/jgit/lib/Config.java">
+ * Config</a> class.
  */
-class GitConfig {
+final class GitConfig {
 
     private static final class ConfigLine {
         @Nullable
@@ -50,10 +51,53 @@ class GitConfig {
         @Nullable
         String value;
 
-        boolean match(final String aSection, @Nullable final String aSubsection, final String aKey) {
-            return StringUtils.equalsIgnoreCase(this.section, aSection)
-                    && StringUtils.equals(this.subsection, aSubsection)
-                    && StringUtils.equalsIgnoreCase(this.name, aKey);
+        boolean match(final String otherSection, @Nullable final String otherSubsection, final String otherKey) {
+            return StringUtils.equalsIgnoreCase(this.section, otherSection)
+                    && Objects.equals(this.subsection, otherSubsection)
+                    && StringUtils.equalsIgnoreCase(this.name, otherKey);
+        }
+
+        /**
+         * Compares this with the specified section, subsection and name. According to
+         * <a href="https://git-scm.com/docs/git-config#_configuration_file">git-config</a>, section names and key names
+         * are compared case-insensitive and subsections are compared case-sensitive. Sections are compared, followed
+         * by subsections, and then key names.
+         *
+         * @param other Other configuration line to compare
+         * @return 0 if all items are equal. A negative value if this section, subsection, or name is less than
+         *      the corresponding specified items. A positive value if this section, subsection, or name is greater
+         *      than the corresponding specified items.
+         */
+        int compare(final ConfigLine other) {
+            return compare(other.section, other.subsection, other.name);
+        }
+
+        /**
+         * Compares this with the specified section, subsection and name. According to
+         * <a href="https://git-scm.com/docs/git-config#_configuration_file">git-config</a>, section names and key names
+         * are compared case-insensitive and subsections are compared case-sensitive. Sections are compared, followed
+         * by subsections, and then key names.
+         *
+         * @param otherSection Other section name
+         * @param otherSubsection Other subsection name
+         * @param otherName Other key name
+         * @return 0 if all items are equal. A negative value if this section, subsection, or name is less than
+         *      the corresponding specified items. A positive value if this section, subsection, or name is greater
+         *      than the corresponding specified items.
+         */
+        int compare(@Nullable final String otherSection, @Nullable final String otherSubsection,
+                    @Nullable final String otherName) {
+            int c = StringUtils.compareIgnoreCase(this.section, otherSection);
+            if (c != 0) {
+                return c;
+            }
+
+            c = StringUtils.compare(this.subsection, otherSubsection);
+            if (c != 0) {
+                return c;
+            }
+
+            return StringUtils.compareIgnoreCase(this.name, otherName);
         }
 
         @Override
@@ -76,468 +120,484 @@ class GitConfig {
     }
 
 
-    private static final class StringReader {
-
-        private final char[] buf;
-        private int pos;
-
-        StringReader(final String str) {
-            this.buf = str.toCharArray();
-        }
-
-        int read() {
-            return (this.pos >= this.buf.length) ? -1 : this.buf[this.pos++];
-        }
-
-        void unread() {
-            this.pos--;
-        }
-    }
-
-
     private static final int MAX_DEPTH = 10;
 
+    private final ConfigLine[] configEntries;
+
     /**
-     * Magic value indicating a missing entry.
-     * <p>
-     * This value is tested for reference equality in some contexts, so we
-     * must ensure it is a special copy of the empty string.  It also must
-     * be treated like the empty string.
-     * </p>
+     * Creates a Git configuration object based on the contents of the specified file.
+     *
+     * @param configFile Git configuration file to read
+     * @throws MatchingException if there was a problem reading the configuration file.
      */
-    private static final String MISSING_ENTRY = "";
+    GitConfig(final Path configFile) throws MatchingException {
+        final Path basePath = configFile.getParent();
+        assert basePath != null;
 
-    private final Path configFile;
-    private final List<ConfigLine> entries;
-    @Nullable
-    private volatile List<ConfigLine> sorted;
-
-    GitConfig(final Path configFile) {
-        this.configFile = configFile;
-        this.entries = new ArrayList<>();
+        final String config = readConfig(configFile);
+        this.configEntries = parse(config, basePath, 1).stream()
+                                                       .filter(line -> line.section != null && line.name != null)
+                                                       .sorted(ConfigLine::compare)
+                                                       .toArray(ConfigLine[]::new);
     }
 
+    /**
+     * Obtains the configuration value with the specified name in the specified section.
+     *
+     * @param section Section of the configuration in which to find the value
+     * @param name Name of the value within the specified section
+     * @return Configuration value or {@code null} if the value was not found.
+     */
     @Nullable
     String getString(final String section, final String name) {
         return getString(section, null, name);
     }
 
+    /**
+     * Obtains the configuration value with the specified name in the specified section and subsection.
+     *
+     * @param section Section of the configuration in which to find the value
+     * @param subsection Subsection of the configuration in which to find the value
+     * @param name Name of the value within the specified section and subsection
+     * @return Configuration value or {@code null} if the value was not found.
+     */
     @Nullable
     String getString(final String section, @Nullable final String subsection, final String name) {
         final String[] lst = getStringList(section, subsection, name);
         return (lst == null) ? null : lst[lst.length - 1];
     }
 
+    /**
+     * A Git configuration can have multiple entries for the same key in the same section and subsection. This
+     * method obtains all values matching the specified section, subsection and key name.
+     *
+     * @param section Name of the section to match
+     * @param subsection Name of the subsection to match or {@code null} if there is no subsection
+     * @param name Name of the key to match
+     * @return Values corresponding to the specified section, subsection and key name.
+     */
     @Nullable
     private String[] getStringList(final String section, @Nullable final String subsection, final String name) {
-        final List<ConfigLine> s = sorted();
-        int idx = find(s, section, subsection, name);
-        if (idx < 0) {
+        int start = find(section, subsection, name);
+        if (start < 0) {
             return null;
         }
-        final int end = end(s, idx, section, subsection, name);
-        final String[] r = new String[end - idx];
-        for (int i = 0; idx < end; ) {
-            r[i++] = s.get(idx++).value;
+
+        final int end = findEnd(start, section, subsection, name);
+
+        final String[] r = new String[end - start];
+        for (int i = 0; start < end; i++, start++) {
+            r[i] = this.configEntries[start].value;
         }
         return r;
     }
 
-    private List<ConfigLine> sorted() {
-        List<ConfigLine> r = this.sorted;
-        if (r == null) {
-            r = sort(this.entries);
-            this.sorted = r;
-        }
-        return r;
-    }
-
-    @SuppressWarnings("Convert2streamapi")
-    private static List<ConfigLine> sort(final List<ConfigLine> configLines) {
-        final List<ConfigLine> sorted = new ArrayList<>(configLines.size());
-        for (final ConfigLine line : configLines) {
-            if (line.section != null && line.name != null) {
-                sorted.add(line);
-            }
-        }
-        sorted.sort(new LineComparator());
-        return sorted;
-    }
-
-    private static final class LineComparator implements Comparator<ConfigLine>, Serializable {
-
-        @Serial
-        private static final long serialVersionUID = 1L;
-
-        @Override
-        public int compare(final ConfigLine a, final ConfigLine b) {
-            return compare2(a.section, a.subsection, a.name, b.section, b.subsection, b.name);
-        }
-    }
-
-    private int find(final List<ConfigLine> s, final String s1, @Nullable final String s2, final String name) {
+    /**
+     * Attempts to find the specified configuration line in the list of lines. The list is assumed to be sorted.
+     *
+     * @param section Name of the section to find
+     * @param subsection Name of the subsection to find or {@code null} if no subsection
+     * @param name Name of the key to find
+     * @return Index of the last occurrence of the matching configuration line or a negative value if not found.
+     */
+    private int find(final String section, @Nullable final String subsection, final String name) {
         int low = 0;
-        int high = s.size();
+        int high = this.configEntries.length;
         while (low < high) {
             final int mid = (low + high) >>> 1;
-            final ConfigLine e = s.get(mid);
-            final int cmp = compare2(s1, s2, name, e.section, e.subsection, e.name);
-            if (cmp < 0) {
+            final ConfigLine e = this.configEntries[mid];
+            final int cmp = e.compare(section, subsection, name);
+            if (cmp > 0) {
                 high = mid;
-            } else if (cmp == 0) {
-                return first(s, mid, s1, s2, name);
-            } else {
+            } else if (cmp < 0) {
                 low = mid + 1;
+            } else {
+                return findStart(mid, section, subsection, name);
             }
         }
         return -(low + 1);
     }
 
-    private int first(final List<ConfigLine> s, final int i, final String s1, @Nullable final String s2, final String n) {
-        int pos = i;
-        while (0 < pos) {
-            if (s.get(pos - 1).match(s1, s2, n)) {
-                pos--;
-            } else {
-                return pos;
-            }
+    /**
+     * Obtains the index of the first configuration line matching the specified section, subsection and name,
+     * starting at the specified index. The list is assumed to be sorted and the configuration entry is present.
+     *
+     * @param idx Starting index to search
+     * @param section Name of the section to match
+     * @param subsection Name of the subsection to match or {@code null} if no subsection
+     * @param name Name of the key to match
+     * @return Index of the first configuration entry matching the specified configuration line.
+     */
+    private int findStart(final int idx, final String section, @Nullable final String subsection, final String name) {
+        int i = idx;
+        while (i > 0 && this.configEntries[i - 1].match(section, subsection, name)) {
+            i--;
         }
-        return pos;
-    }
-
-    private int end(final List<ConfigLine> s, final int i, final String s1, @Nullable final String s2, final String n) {
-        int pos = i;
-        while (pos < s.size()) {
-            if (s.get(pos).match(s1, s2, n)) {
-                pos++;
-            } else {
-                return pos;
-            }
-        }
-        return pos;
-    }
-
-    private static int compare2(@Nullable final String aSection, @Nullable final String aSubsection, @Nullable final String aName,
-                                @Nullable final String bSection, @Nullable final String bSubsection, @Nullable final String bName) {
-        int c = StringUtils.compareIgnoreCase(aSection, bSection);
-        if (c != 0) {
-            return c;
-        }
-
-        if (aSubsection == null && bSubsection != null) {
-            return -1;
-        }
-        if (aSubsection != null && bSubsection == null) {
-            return 1;
-        }
-        if (aSubsection != null) {
-            c = aSubsection.compareTo(bSubsection);
-            if (c != 0) {
-                return c;
-            }
-        }
-
-        return StringUtils.compareIgnoreCase(aName, bName);
+        return i;
     }
 
     /**
-     * Clear this configuration and reset to the contents of the parsed string.
+     * Obtains the index of the last configuration line matching the specified section, subsection and name,
+     * starting at the specified index. The list is assumed to be sorted and the configuration entry is present.
      *
-     * @param text Git configuration content
-     * @throws MatchingException if the specified text is not formatted correctly.
+     * @param idx Starting index to search
+     * @param section Name of the section to match
+     * @param subsection Name of the subsection to match or {@code null} if no subsection
+     * @param name Name of the key to match
+     * @return Index after the last configuration entry matching the specified configuration line.
      */
-    void fromText(final String text) throws MatchingException {
-        fromTextRecurse(text, 1);
+    private int findEnd(final int idx, final String section, @Nullable final String subsection, final String name) {
+        int i = idx;
+        while (i < this.configEntries.length && this.configEntries[i].match(section, subsection, name)) {
+            i++;
+        }
+        return i;
     }
 
-    private void fromTextRecurse(final String text, final int depth) throws MatchingException {
-        if (depth > MAX_DEPTH) {
-            throw new MatchingException("Too many include recursions");
-        }
-
-        final StringReader reader = new StringReader(text);
+    /**
+     * Parses the specified Git configuration.
+     *
+     * @param configuration Contents of a Git configuration file
+     * @param depth Current recursive inclusion depth. Prevents unnecessarily deep or infinite inclusion.
+     * @throws MatchingException if there is a problem parsing the configuration.
+     */
+    @SuppressWarnings("StatementWithEmptyBody")
+    private static List<ConfigLine> parse(final String configuration, final Path basePath, final int depth)
+            throws MatchingException {
+        final List<ConfigLine> entries = new ArrayList<>();
+        final StringIterator iterator = new StringIterator(configuration);
         ConfigLine last = null;
-        ConfigLine config = new ConfigLine();
+        ConfigLine configLine = new ConfigLine();
+        boolean inComment = false;
 
         while (true) {
-            int input = reader.read();
+            int input = iterator.next();
             if (-1 == input) {
-                if (config.section != null) {
-                    this.entries.add(config);
+                if (configLine.section != null) {
+                    entries.add(configLine);
                 }
                 break;
             }
 
-            final char c = (char)input;
-            if ('\n' == c) {
+            final char ch = (char)input;
+
+            if ('\n' == ch) {
                 // End of this entry.
-                this.entries.add(config);
-                if (config.section != null) {
-                    last = config;
+                entries.add(configLine);
+                if (configLine.section != null) {
+                    last = configLine;
                 }
-                config = new ConfigLine();
-            } else if ('[' == c) {
-                // This is a section header.
-                config.section = readSectionName(reader);
-                input = reader.read();
+                configLine = new ConfigLine();
+                inComment = false;
+            } else if (inComment || (configLine.section == null && Character.isWhitespace(ch))) { // SUPPRESS CHECKSTYLE Skip
+                // Skip
+            } else if (isComment(ch)) {
+                inComment = true;
+            } else if ('[' == ch) {
+                // Group header.
+                configLine.section = readSectionName(iterator);
+                input = iterator.next();
                 if ('"' == input) {
-                    config.subsection = readSubsectionName(reader);
-                    input = reader.read();
+                    configLine.subsection = readSubsectionName(iterator);
+                    input = iterator.next();
                 }
                 if (']' != input) {
                     throw new MatchingException("Bad group header");
                 }
             } else if (last != null) {
-                // Read a value.
-                config.section = last.section;
-                config.subsection = last.subsection;
-                reader.unread();
-                config.name = readKeyName(reader);
-                if (config.name.endsWith("\n")) {
-                    config.name = config.name.substring(0, config.name.length() - 1);
-                    config.value = MISSING_ENTRY;
+                // Value.
+                configLine.section = last.section;
+                configLine.subsection = last.subsection;
+                iterator.prev();
+                configLine.name = readKeyName(iterator);
+                if (configLine.name.endsWith("\n")) {
+                    configLine.name = configLine.name.substring(0, configLine.name.length() - 1);
+                    configLine.value = null;
                 } else {
-                    config.value = readValue(reader);
+                    configLine.value = readValue(iterator);
                 }
 
-                if ("include".equalsIgnoreCase(config.section)) {
-                    addIncludedConfig(config, depth);
+                // Include another Git config file
+                if ("include".equalsIgnoreCase(configLine.section)) {
+                    entries.addAll(includeConfig(configLine, basePath, depth));
                 }
             } else {
-                throw new MatchingException("Invalid line in config file");
+                throw new MatchingException("Invalid line in config file: " + configLine);
             }
         }
+
+        return entries;
     }
 
-    @Nullable
-    private String readIncludedConfig(final String relPath) throws MatchingException {
-        final Path file;
-        if (relPath.startsWith("~/")) {
-            file = PathUtils.HOME_PATH.resolve(relPath.substring(2));
-        } else {
-            final Path parent = this.configFile.getParent();
-            assert parent != null;
-            file = parent.resolve(relPath);
+    /**
+     * Handles the inclusion of a Git configuration file into the current configuration file.
+     *
+     * @param configLine Configuration file line containing the include directive
+     * @param basePath Path to resolve relative includes
+     * @param depth Current recursive inclusion depth. Prevents unnecessarily deep or infinite inclusion.
+     * @return Included configuration lines
+     * @throws MatchingException if there was a problem including the configuration file
+     */
+    private static List<ConfigLine> includeConfig(final ConfigLine configLine, final Path basePath, final int depth)
+            throws MatchingException {
+        if (depth > MAX_DEPTH) {
+            throw new MatchingException("Too many include recursions");
         }
 
-        if (Files.notExists(file)) {
-            return null;
+        if (!"path".equalsIgnoreCase(configLine.name) || configLine.value == null) {
+            throw new MatchingException("Invalid line in config file: " + configLine);
         }
 
+        final String expandedPath = GitUtils.expandTilde(configLine.value);
+        final String config = readConfig(basePath.resolve(expandedPath));
+        return parse(config, basePath, depth + 1);
+    }
+
+    /**
+     * Reads the specified Git configuration file.
+     *
+     * @param file Git configuration file to be read
+     * @return Complete contents of the configuration file
+     * @throws MatchingException if there was a problem reading the configuration file.
+     */
+    private static String readConfig(final Path file) throws MatchingException {
         try {
             return Files.readString(file, StandardCharsets.UTF_8);
-        } catch (final FileNotFoundException ex) {
-            return null;
         } catch (final IOException ex) {
-            throw new MatchingException("Cannot read file " + relPath, ex);
+            throw new MatchingException("Cannot read file " + file, ex);
         }
     }
 
-    private void addIncludedConfig(final ConfigLine line, final int depth) throws MatchingException {
-        if (!"path".equalsIgnoreCase(line.name) || line.value == null || MISSING_ENTRY.equals(line.value)) {
-            throw new MatchingException("Invalid line in config file: " + line);
-        }
-        final String decoded = readIncludedConfig(line.value);
-        if (decoded == null) {
-            return;
-        }
-
-        try {
-            fromTextRecurse(decoded, depth + 1);
-        } catch (final MatchingException ex) {
-            throw new MatchingException("Cannot read file " + line.value, ex);
-        }
-    }
-
-    private static String readSectionName(final StringReader reader) throws MatchingException {
+    /**
+     * Parses the name of a section from the specified string iterator.
+     *
+     * @param iterator Iterator over the input config file
+     * @return Section name parsed from the specified iterator.
+     * @throws MatchingException if there was a problem parsing a name.
+     */
+    @AccessForTesting
+    static String readSectionName(final StringIterator iterator) throws MatchingException {
         final StringBuilder name = new StringBuilder();
 
         while (true) {
-            int c = reader.read();
+            int ch = iterator.next();
 
-            if (c < 0) {
+            if (ch < 0) {
                 throw new MatchingException("Unexpected end of config file");
             }
 
-            if (']' == c) {
-                reader.unread();
+            if (']' == ch) {
+                iterator.prev();
                 break;
             }
 
-            if (' ' == c || '\t' == c) {
+            if (' ' == ch || '\t' == ch) {
                 while (true) {
-                    c = reader.read();
+                    ch = iterator.next();
 
-                    if (c < 0) {
+                    if (ch < 0) {
                         throw new MatchingException("Unexpected end of config file");
                     }
 
-                    if ('"' == c) {
-                        reader.unread();
+                    if ('"' == ch) {
+                        iterator.prev();
                         break;
                     }
 
-                    if (' ' == c || '\t' == c) {
-                        continue; // Skip
+                    if (' ' == ch || '\t' == ch) {
+                        continue;
                     }
 
-                    throw new MatchingException("Bad section entry: " + name);
+                    throw new MatchingException("Bad section name: " + name + (char)ch);
                 }
                 break;
             }
 
-            if (Character.isLetterOrDigit((char)c) || '.' == c || '-' == c) {
-                name.append((char)c);
+            if (Character.isLetterOrDigit((char)ch) || '.' == ch || '-' == ch) {
+                name.append((char)ch);
             } else {
-                throw new MatchingException("Bad section entry: " + name);
+                throw new MatchingException("Bad section name: " + name + (char)ch);
             }
         }
 
         return name.toString();
     }
 
-    private static String readKeyName(final StringReader reader) throws MatchingException {
+    /**
+     * Parses the name of a subsection from the specified string iterator.
+     *
+     * @param iterator Iterator over the input config file
+     * @return Subsection name parsed from the specified iterator.
+     * @throws MatchingException if there was a problem parsing a name.
+     */
+    @AccessForTesting
+    static String readSubsectionName(final StringIterator iterator) throws MatchingException {
         final StringBuilder name = new StringBuilder();
 
         while (true) {
-            int c = reader.read();
+            int ch = iterator.next();
 
-            if (c < 0) {
-                throw new MatchingException("Unexpected end of config file");
-            }
-
-            if ('=' == c) {
+            if (ch < 0) {
                 break;
             }
 
-            if (' ' == c || '\t' == c) {
-                while (true) {
-                    c = reader.read();
-                    if (c < 0) {
-                        throw new MatchingException("Unexpected end of config file");
-                    }
-                    if ('=' == c) {
-                        break;
-                    }
-                    if (';' == c || '#' == c || '\n' == c) {
-                        reader.unread();
-                        break;
-                    }
-                    if (' ' == c || '\t' == c) {
-                        continue; // Skip
-                    }
-                    throw new MatchingException("Bad entry delimiter");
-                }
-                break;
-            }
-
-            if (Character.isLetterOrDigit((char)c) || c == '-') {
-                // According to the git-config documentation, the variable names are case-insensitive
-                // and only alphanumeric characters and "-" are allowed.
-                name.append((char)c);
-            } else if ('\n' == c) {
-                reader.unread();
-                name.append((char)c);
-                break;
-            } else {
-                throw new MatchingException("Bad entry name: " + name);
-            }
-        }
-
-        return name.toString();
-    }
-
-    private static String readSubsectionName(final StringReader reader) throws MatchingException {
-        final StringBuilder name = new StringBuilder();
-
-        while (true) {
-            int c = reader.read();
-
-            if (c < 0) {
-                break;
-            }
-
-            if ('\n' == c) {
+            if ('\n' == ch) {
                 throw new MatchingException("Newline in quotes not allowed");
             }
 
-            if ('\\' == c) {
-                c = reader.read();
-                switch (c) {
+            // Escaped character
+            if ('\\' == ch) {
+                ch = iterator.next();
+                switch (ch) {
                     case -1:
                         throw new MatchingException("End of file in escape");
-                    case '\\' | '"':
-                        name.append((char)c);
+                    case '\\':
+                        name.append('\\');
+                        continue;
+                    case '"':
+                        name.append('"');
                         continue;
                     default:
-                        // C git simply drops backslashes if the escape sequence is not recognized.
-                        name.append((char)c);
+                        // Drop backslashes if the escape sequence is not recognized.
+                        name.append((char)ch);
                         continue;
                 }
             }
 
-            if ('"' == c) {
+            if ('"' == ch) {
                 break;
             }
 
-            name.append((char)c);
+            name.append((char)ch);
         }
 
         return name.toString();
     }
 
+    /**
+     * Parses the name of a configuration key from the specified string iterator.
+     *
+     * @param iterator Iterator over the input config file
+     * @return Configuration key name parsed from the specified iterator.
+     * @throws MatchingException if there was a problem parsing a key.
+     */
+    @AccessForTesting
+    static String readKeyName(final StringIterator iterator) throws MatchingException {
+        final StringBuilder name = new StringBuilder();
+
+        while (true) {
+            int ch = iterator.next();
+
+            if (ch < 0) {
+                throw new MatchingException("Unexpected end of config file");
+            }
+
+            if ('=' == ch) {
+                break;
+            }
+
+            if (' ' == ch || '\t' == ch) {
+                while (true) {
+                    ch = iterator.next();
+
+                    if (ch < 0) {
+                        throw new MatchingException("Unexpected end of config file");
+                    }
+
+                    if ('=' == ch) {
+                        break;
+                    }
+
+                    if (isComment(ch) || '\n' == ch) {
+                        iterator.prev();
+                        break;
+                    }
+
+                    if (' ' == ch || '\t' == ch) {
+                        continue;
+                    }
+
+                    throw new MatchingException("Bad entry delimiter: " + (char)ch);
+                }
+                break;
+            }
+
+            // According to the git-config documentation, names are case-insensitive and
+            // only alphanumeric characters and "-" are allowed.
+            if (Character.isLetterOrDigit(ch) || ch == '-') {
+                name.append((char)ch);
+            } else if ('\n' == ch) {
+                iterator.prev();
+                name.append('\n');
+                break;
+            } else {
+                throw new MatchingException("Bad entry name: " + name + (char)ch);
+            }
+        }
+
+        return name.toString();
+    }
+
+    /**
+     * Parses a value from the specified string iterator.
+     *
+     * @param iterator Iterator over the input config file
+     * @return Value parsed from the specified iterator or {@code null} if no value could be parsed.
+     * @throws MatchingException if there was a problem parsing a value.
+     */
+    @AccessForTesting
     @Nullable
-    private static String readValue(final StringReader reader) throws MatchingException {
+    static String readValue(final StringIterator iterator) throws MatchingException {
         final StringBuilder value = new StringBuilder();
-        StringBuilder trailingSpaces = null;
-        boolean quote = false;
+        final StringBuilder trailingSpaces = new StringBuilder();
+        boolean inQuote = false;
         boolean inLeadingSpace = true;
 
         while (true) {
-            int c = reader.read();
+            int ch = iterator.next();
 
-            if (c < 0) {
+            // End of the configuration
+            if (ch == -1) {
                 break;
             }
 
-            if ('\n' == c) {
-                if (quote) {
+            // Newline
+            if ('\n' == ch) {
+                if (inQuote) {
                     throw new MatchingException("Newline in quotes not allowed");
                 }
-                reader.unread();
+                iterator.prev();
                 break;
             }
 
-            if (!quote && (';' == c || '#' == c)) {
-                if (trailingSpaces != null) {
-                    trailingSpaces.setLength(0);
-                }
-                reader.unread();
+            // Trailing comment
+            if (!inQuote && isComment(ch)) {
+                trailingSpaces.setLength(0);
+                iterator.prev();
                 break;
             }
 
-            final char cc = (char)c;
-            if (Character.isWhitespace(cc)) {
-                if (inLeadingSpace) {
-                    continue;
+            // Whitespace
+            if (Character.isWhitespace(ch)) {
+                if (!inLeadingSpace) {
+                    trailingSpaces.append((char)ch);
                 }
-                if (trailingSpaces == null) {
-                    trailingSpaces = new StringBuilder();
-                }
-                trailingSpaces.append(cc);
                 continue;
             }
 
             inLeadingSpace = false;
 
-            if (trailingSpaces != null) {
+            if (!trailingSpaces.isEmpty()) {
                 value.append(trailingSpaces);
                 trailingSpaces.setLength(0);
             }
 
-            if ('\\' == c) {
-                c = reader.read();
-                switch (c) {
+            final char savedCh = (char)ch;
+
+            // Escaped character
+            if ('\\' == ch) {
+                ch = iterator.next();
+                switch (ch) {
                     case -1:
                         throw new MatchingException("End of file in escape");
                     case '\n':
@@ -558,30 +618,41 @@ class GitConfig {
                         value.append('"');
                         continue;
                     case '\r': {
-                        final int next = reader.read();
+                        final int next = iterator.next();
+                        // CR-LF
                         if (next == '\n') {
-                            continue; // CR-LF
-                        } else if (next >= 0) {
-                            reader.unread();
+                            continue;
                         }
                         break;
                     }
                     default:
                         break;
                 }
-                throw new MatchingException("Bad escape: " + (Character.isAlphabetic(c)
-                                                              ? Character.valueOf(((char)c)).toString()
-                                                              : String.format("\\u%04x", c)));
+                throw new MatchingException("Bad escape: " + (Character.isAlphabetic(ch)
+                                                              ? (char)ch
+                                                              : String.format("\\u%04x", ch)));
             }
 
-            if ('"' == c) {
-                quote = !quote;
+            // Quote
+            if ('"' == ch) {
+                inQuote = !inQuote;
                 continue;
             }
 
-            value.append(cc);
+            // Everything else
+            value.append(savedCh);
         }
 
-        return !value.isEmpty() ? value.toString() : null;
+        return value.isEmpty() ? null : value.toString();
+    }
+
+    /**
+     * Indicates whether the specified character begins a comment.
+     *
+     * @param ch Character to test
+     * @return {@code true} if the specified character begins a comment.
+     */
+    private static boolean isComment(final int ch) {
+        return ';' == ch || '#' == ch;
     }
 }

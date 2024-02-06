@@ -1,0 +1,7 @@
+[user]
+  name = C Thing Software
+  email = cthing@foobar.com
+  username = cthing
+  email = joe@cthing.com
+  username = joe
+  username = bill

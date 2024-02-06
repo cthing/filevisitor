@@ -1,0 +1,5 @@
+[core]
+	filemode = false
+
+[include]
+	path = included.txt ; include relative path

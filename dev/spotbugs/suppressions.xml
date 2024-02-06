@@ -9,6 +9,10 @@
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
     <Match>
+        <Bug pattern="ES_COMPARING_PARAMETER_STRING_WITH_EQ"/>
+        <Class name="~.*StringUtils"/>
+    </Match>
+    <Match>
         <Bug pattern="STT_STRING_PARSING_A_FIELD"/>
     </Match>
     <Match>

@@ -141,7 +141,7 @@ final class GitIgnore {
     static GitIgnore findGlobalIgnore() throws MatchingException {
         final Path configFile = GitUtils.findGlobalConfigFile();
 
-        if (configFile != null && Files.isReadable(configFile)) {
+        if (configFile != null) {
             final GitConfig config = new GitConfig(configFile);
             final String excludesFile = config.getString("core", "excludesFile");
             if (excludesFile != null) {

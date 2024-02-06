@@ -78,6 +78,7 @@ final class Glob {
     }
 
     private static class CharRange {
+
         char start;
         char end;
 
@@ -95,6 +96,7 @@ final class Glob {
     }
 
     private static class Token {
+
         final TokenType type;
         final char ch;
         final boolean negated;
@@ -123,19 +125,17 @@ final class Glob {
     }
 
     private static class Parser {
-        private final String pattern;
+
+        private final StringIterator iterator;
         private final LinkedList<Token> tokens;
-        private int charPos;
-        private char previous;
-        private char current;
 
         Parser(final String pattern) {
-            this.pattern = pattern;
+            this.iterator = new StringIterator(pattern);
             this.tokens = new LinkedList<>();
         }
 
         List<Token> parse() throws MatchingException {
-            for (char ch = step(); ch != 0; ch = step()) {
+            for (int ch = this.iterator.next(); ch != -1; ch = this.iterator.next()) {
                 switch (ch) {
                     case '?':
                         this.tokens.addLast(new Token(TokenType.Any));
@@ -150,7 +150,7 @@ final class Glob {
                         parseBackslash();
                         break;
                     default:
-                        this.tokens.addLast(new Token(ch));
+                        this.tokens.addLast(new Token((char)ch));
                         break;
                 }
             }
@@ -159,19 +159,19 @@ final class Glob {
         }
 
         private void parseStar() {
-            final char prev = this.previous;
-            if (peekNext() == '*') {
+            final int prev = this.iterator.peekPrev();
+            if (this.iterator.peekNext() == '*') {
                 this.tokens.addLast(new Token(TokenType.ZeroOrMore));
                 return;
             }
 
-            final char star = step();
+            final int star = this.iterator.next();
             assert star == '*';
 
             if (this.tokens.isEmpty()) {
-                if (peekNext() == '/') {
+                if (this.iterator.peekNext() == '/') {
                     this.tokens.addLast(new Token(TokenType.RecursivePrefix));
-                    final char sep = step();
+                    final int sep = this.iterator.next();
                     assert sep == '/';
                 } else {
                     this.tokens.addLast(new Token(TokenType.ZeroOrMore));
@@ -187,12 +187,12 @@ final class Glob {
             }
 
             final boolean suffix;
-            final char nextCh = peekNext();
-            if (nextCh == 0) {
-                step();
+            final int nextCh = this.iterator.peekNext();
+            if (nextCh < 0) {
+                this.iterator.next();
                 suffix = true;
             } else if (nextCh == '/') {
-                step();
+                this.iterator.next();
                 suffix = false;
             } else {
                 this.tokens.addLast(new Token(TokenType.ZeroOrMore));
@@ -217,10 +217,10 @@ final class Glob {
         private void parseCharClass() throws MatchingException {
             final List<CharRange> ranges = new ArrayList<>();
 
-            final char nextCh = peekNext();
+            final int nextCh = this.iterator.peekNext();
             final boolean negated;
             if (nextCh == '!' || nextCh == '^') {
-                final char ch = step();
+                final int ch = this.iterator.next();
                 assert ch == '!' || ch == '^';
                 negated = true;
             } else {
@@ -230,8 +230,8 @@ final class Glob {
             boolean first = true;
             boolean inRange = false;
             loop: while (true) {
-                final char ch = step();
-                if (ch == 0) {
+                final int ch = this.iterator.next();
+                if (ch < 0) {
                     throw new MatchingException("Character class not closed");
                 }
 
@@ -261,12 +261,12 @@ final class Glob {
                     default:
                         if (inRange) {
                             final CharRange r = ranges.get(ranges.size() - 1);
-                            r.end = ch;
+                            r.end = (char)ch;
                             if (r.end < r.start) {
                                 throw new MatchingException("Invalid character range: " + r);
                             }
                         } else {
-                            ranges.add(new CharRange(ch, ch));
+                            ranges.add(new CharRange((char)ch, (char)ch));
                         }
                         inRange = false;
                         break;
@@ -283,21 +283,11 @@ final class Glob {
         }
 
         private void parseBackslash() throws MatchingException {
-            final char ch = step();
-            if (ch == 0) {
+            final int ch = this.iterator.next();
+            if (ch < 0) {
                 throw new MatchingException("Incomplete escape");
             }
-            this.tokens.addLast(new Token(ch));
-        }
-
-        private char peekNext() {
-            return (this.charPos >= this.pattern.length()) ? 0 : this.pattern.charAt(this.charPos + 1);
-        }
-
-        private char step() {
-            this.previous = this.current;
-            this.current = (this.charPos >= this.pattern.length()) ? 0 : this.pattern.charAt(this.charPos++);
-            return this.current;
+            this.tokens.addLast(new Token((char)ch));
         }
     }
 
