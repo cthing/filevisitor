@@ -97,6 +97,8 @@ final class GitConfig {
         }
     }
 
+    /** Global Git config. */
+    static final GitConfig CONFIG = findGlobalConfig();
 
     private static final int MAX_DEPTH = 10;
 
@@ -109,13 +111,32 @@ final class GitConfig {
      * @throws MatchingException if there was a problem reading the configuration file.
      */
     GitConfig(final Path configFile) throws MatchingException {
-        this.configEntries = new HashMap<>();
+        this();
 
         final Path basePath = configFile.getParent();
         assert basePath != null;
 
         final String config = readConfig(configFile);
         parse(config, basePath, 1);
+    }
+
+    private GitConfig() {
+        this.configEntries = new HashMap<>();
+    }
+
+    /**
+     * Searches for the current user's global Git config, if one exists.
+     *
+     * @return User's global Git config. See {@link GitUtils#findGlobalConfigFile()} for details on finding the
+     *      global configuration file.
+     */
+    static GitConfig findGlobalConfig() {
+        final Path configFile = GitUtils.findGlobalConfigFile();
+        try {
+            return configFile == null ? new GitConfig() : new GitConfig(configFile);
+        } catch (final MatchingException ex) {
+            return new GitConfig();
+        }
     }
 
     /**

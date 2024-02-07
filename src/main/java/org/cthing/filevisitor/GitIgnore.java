@@ -100,23 +100,28 @@ final class GitIgnore {
         NONE
     }
 
+    private static final boolean CASE_INSENSITIVE = GitConfig.CONFIG.getBoolean("core", "ignoreCase", false);
+
     private final Path root;
     private final List<Pattern> patterns;
 
     GitIgnore(final Path root, final Path ignoreFile) throws MatchingException {
-        this.root = PathUtils.removePrefix("./", root);
-        this.patterns = new ArrayList<>();
+        this(root);
 
         parse(ignoreFile);
     }
 
     GitIgnore(final Path root, final List<String> ignoreLines) throws MatchingException {
-        this.root = PathUtils.removePrefix("./", root);
-        this.patterns = new ArrayList<>();
+        this(root);
 
         for (final String ignoreLine : ignoreLines) {
             parse(ignoreLine);
         }
+    }
+
+    private GitIgnore(final Path root) {
+        this.root = PathUtils.removePrefix("./", root);
+        this.patterns = new ArrayList<>();
     }
 
     @SuppressWarnings("Convert2streamapi")
@@ -139,19 +144,15 @@ final class GitIgnore {
 
     @Nullable
     static GitIgnore findGlobalIgnore() throws MatchingException {
-        final Path configFile = GitUtils.findGlobalConfigFile();
-
-        if (configFile != null) {
-            final GitConfig config = new GitConfig(configFile);
-            final String excludesFile = config.getString("core", "excludesFile");
-            if (excludesFile != null) {
-                final Path excludePath = Path.of(GitUtils.expandTilde(excludesFile));
-                final Path parent = excludePath.getParent();
-                assert parent != null;
-                return new GitIgnore(parent, excludePath);
-            }
+        final String excludesFile = GitConfig.CONFIG.getString("core", "excludesFile");
+        if (excludesFile == null) {
+            return null;
         }
-        return null;
+
+        final Path excludePath = Path.of(GitUtils.expandTilde(excludesFile));
+        final Path parent = excludePath.getParent();
+        assert parent != null;
+        return new GitIgnore(parent, excludePath);
     }
 
     private void parse(final Path ignoreFile) throws MatchingException {
@@ -229,7 +230,7 @@ final class GitIgnore {
             globStr += "/*";
         }
 
-        final Glob glob = new Glob(globStr);
+        final Glob glob = new Glob(globStr, CASE_INSENSITIVE);
         final Pattern pattern = new Pattern(line, glob, negated, dirOnly);
         this.patterns.add(pattern);
     }
