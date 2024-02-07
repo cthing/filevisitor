@@ -24,7 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -41,63 +44,21 @@ import org.cthing.annotations.AccessForTesting;
  */
 final class GitConfig {
 
-    private static final class ConfigLine {
+    private static final class ConfigKey {
         @Nullable
         String section;
         @Nullable
         String subsection;
         @Nullable
         String name;
-        @Nullable
-        String value;
 
-        boolean match(final String otherSection, @Nullable final String otherSubsection, final String otherKey) {
-            return StringUtils.equalsIgnoreCase(this.section, otherSection)
-                    && Objects.equals(this.subsection, otherSubsection)
-                    && StringUtils.equalsIgnoreCase(this.name, otherKey);
+        ConfigKey() {
         }
 
-        /**
-         * Compares this with the specified section, subsection and name. According to
-         * <a href="https://git-scm.com/docs/git-config#_configuration_file">git-config</a>, section names and key names
-         * are compared case-insensitive and subsections are compared case-sensitive. Sections are compared, followed
-         * by subsections, and then key names.
-         *
-         * @param other Other configuration line to compare
-         * @return 0 if all items are equal. A negative value if this section, subsection, or name is less than
-         *      the corresponding specified items. A positive value if this section, subsection, or name is greater
-         *      than the corresponding specified items.
-         */
-        int compare(final ConfigLine other) {
-            return compare(other.section, other.subsection, other.name);
-        }
-
-        /**
-         * Compares this with the specified section, subsection and name. According to
-         * <a href="https://git-scm.com/docs/git-config#_configuration_file">git-config</a>, section names and key names
-         * are compared case-insensitive and subsections are compared case-sensitive. Sections are compared, followed
-         * by subsections, and then key names.
-         *
-         * @param otherSection Other section name
-         * @param otherSubsection Other subsection name
-         * @param otherName Other key name
-         * @return 0 if all items are equal. A negative value if this section, subsection, or name is less than
-         *      the corresponding specified items. A positive value if this section, subsection, or name is greater
-         *      than the corresponding specified items.
-         */
-        int compare(@Nullable final String otherSection, @Nullable final String otherSubsection,
-                    @Nullable final String otherName) {
-            int c = StringUtils.compareIgnoreCase(this.section, otherSection);
-            if (c != 0) {
-                return c;
-            }
-
-            c = StringUtils.compare(this.subsection, otherSubsection);
-            if (c != 0) {
-                return c;
-            }
-
-            return StringUtils.compareIgnoreCase(this.name, otherName);
+        ConfigKey(@Nullable final String section, @Nullable final String subsection, @Nullable final String name) {
+            this.section = section;
+            this.subsection = subsection;
+            this.name = name;
         }
 
         @Override
@@ -112,17 +73,34 @@ final class GitConfig {
             if (this.name != null) {
                 buffer.append('.').append(this.name);
             }
-            if (this.value != null) {
-                buffer.append('=').append(this.value);
-            }
             return buffer.toString();
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+
+            final ConfigKey that = (ConfigKey)obj;
+            return Objects.equals(this.section, that.section)
+                    && Objects.equals(this.subsection, that.subsection)
+                    && Objects.equals(this.name, that.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.section, this.subsection, this.name);
         }
     }
 
 
     private static final int MAX_DEPTH = 10;
 
-    private final ConfigLine[] configEntries;
+    private final Map<ConfigKey, List<String>> configEntries;
 
     /**
      * Creates a Git configuration object based on the contents of the specified file.
@@ -131,14 +109,13 @@ final class GitConfig {
      * @throws MatchingException if there was a problem reading the configuration file.
      */
     GitConfig(final Path configFile) throws MatchingException {
+        this.configEntries = new HashMap<>();
+
         final Path basePath = configFile.getParent();
         assert basePath != null;
 
         final String config = readConfig(configFile);
-        this.configEntries = parse(config, basePath, 1).stream()
-                                                       .filter(line -> line.section != null && line.name != null)
-                                                       .sorted(ConfigLine::compare)
-                                                       .toArray(ConfigLine[]::new);
+        parse(config, basePath, 1);
     }
 
     /**
@@ -163,8 +140,8 @@ final class GitConfig {
      */
     @Nullable
     String getString(final String section, @Nullable final String subsection, final String name) {
-        final String[] lst = getStringList(section, subsection, name);
-        return (lst == null) ? null : lst[lst.length - 1];
+        final List<String> lst = getStringList(section, subsection, name);
+        return (lst == null) ? null : lst.get(lst.size() - 1);
     }
 
     /**
@@ -216,81 +193,10 @@ final class GitConfig {
      * @return Values corresponding to the specified section, subsection and key name.
      */
     @Nullable
-    private String[] getStringList(final String section, @Nullable final String subsection, final String name) {
-        int start = find(section, subsection, name);
-        if (start < 0) {
-            return null;
-        }
-
-        final int end = findEnd(start, section, subsection, name);
-
-        final String[] r = new String[end - start];
-        for (int i = 0; start < end; i++, start++) {
-            r[i] = this.configEntries[start].value;
-        }
-        return r;
-    }
-
-    /**
-     * Attempts to find the specified configuration line in the list of lines. The list is assumed to be sorted.
-     *
-     * @param section Name of the section to find
-     * @param subsection Name of the subsection to find or {@code null} if no subsection
-     * @param name Name of the key to find
-     * @return Index of the last occurrence of the matching configuration line or a negative value if not found.
-     */
-    private int find(final String section, @Nullable final String subsection, final String name) {
-        int low = 0;
-        int high = this.configEntries.length;
-        while (low < high) {
-            final int mid = (low + high) >>> 1;
-            final ConfigLine e = this.configEntries[mid];
-            final int cmp = e.compare(section, subsection, name);
-            if (cmp > 0) {
-                high = mid;
-            } else if (cmp < 0) {
-                low = mid + 1;
-            } else {
-                return findStart(mid, section, subsection, name);
-            }
-        }
-        return -(low + 1);
-    }
-
-    /**
-     * Obtains the index of the first configuration line matching the specified section, subsection and name,
-     * starting at the specified index. The list is assumed to be sorted and the configuration entry is present.
-     *
-     * @param idx Starting index to search
-     * @param section Name of the section to match
-     * @param subsection Name of the subsection to match or {@code null} if no subsection
-     * @param name Name of the key to match
-     * @return Index of the first configuration entry matching the specified configuration line.
-     */
-    private int findStart(final int idx, final String section, @Nullable final String subsection, final String name) {
-        int i = idx;
-        while (i > 0 && this.configEntries[i - 1].match(section, subsection, name)) {
-            i--;
-        }
-        return i;
-    }
-
-    /**
-     * Obtains the index of the last configuration line matching the specified section, subsection and name,
-     * starting at the specified index. The list is assumed to be sorted and the configuration entry is present.
-     *
-     * @param idx Starting index to search
-     * @param section Name of the section to match
-     * @param subsection Name of the subsection to match or {@code null} if no subsection
-     * @param name Name of the key to match
-     * @return Index after the last configuration entry matching the specified configuration line.
-     */
-    private int findEnd(final int idx, final String section, @Nullable final String subsection, final String name) {
-        int i = idx;
-        while (i < this.configEntries.length && this.configEntries[i].match(section, subsection, name)) {
-            i++;
-        }
-        return i;
+    private List<String> getStringList(final String section, @Nullable final String subsection, final String name) {
+        final ConfigKey key = new ConfigKey(section.toLowerCase(Locale.ROOT), subsection,
+                                            name.toLowerCase(Locale.ROOT));
+        return this.configEntries.get(key);
     }
 
     /**
@@ -301,19 +207,19 @@ final class GitConfig {
      * @throws MatchingException if there is a problem parsing the configuration.
      */
     @SuppressWarnings("StatementWithEmptyBody")
-    private static List<ConfigLine> parse(final String configuration, final Path basePath, final int depth)
+    private void parse(final String configuration, final Path basePath, final int depth)
             throws MatchingException {
-        final List<ConfigLine> entries = new ArrayList<>();
         final StringIterator iterator = new StringIterator(configuration);
-        ConfigLine last = null;
-        ConfigLine configLine = new ConfigLine();
+        ConfigKey last = null;
+        ConfigKey configKey = new ConfigKey();
+        String configValue = null;
         boolean inComment = false;
 
         while (true) {
             int input = iterator.next();
             if (-1 == input) {
-                if (configLine.section != null) {
-                    entries.add(configLine);
+                if (configKey.section != null) {
+                    addValue(configKey, configValue);
                 }
                 break;
             }
@@ -322,22 +228,23 @@ final class GitConfig {
 
             if ('\n' == ch) {
                 // End of this entry.
-                entries.add(configLine);
-                if (configLine.section != null) {
-                    last = configLine;
+                addValue(configKey, configValue);
+                if (configKey.section != null) {
+                    last = configKey;
                 }
-                configLine = new ConfigLine();
+                configKey = new ConfigKey();
+                configValue = null;
                 inComment = false;
-            } else if (inComment || (configLine.section == null && Character.isWhitespace(ch))) { // SUPPRESS CHECKSTYLE Skip
+            } else if (inComment || (configKey.section == null && Character.isWhitespace(ch))) { // SUPPRESS CHECKSTYLE Skip
                 // Skip
             } else if (isComment(ch)) {
                 inComment = true;
             } else if ('[' == ch) {
                 // Group header.
-                configLine.section = readSectionName(iterator);
+                configKey.section = readSectionName(iterator);
                 input = iterator.next();
                 if ('"' == input) {
-                    configLine.subsection = readSubsectionName(iterator);
+                    configKey.subsection = readSubsectionName(iterator);
                     input = iterator.next();
                 }
                 if (']' != input) {
@@ -345,51 +252,61 @@ final class GitConfig {
                 }
             } else if (last != null) {
                 // Value.
-                configLine.section = last.section;
-                configLine.subsection = last.subsection;
+                configKey.section = last.section;
+                configKey.subsection = last.subsection;
                 iterator.prev();
-                configLine.name = readKeyName(iterator);
-                if (configLine.name.endsWith("\n")) {
-                    configLine.name = configLine.name.substring(0, configLine.name.length() - 1);
-                    configLine.value = "";
+                configKey.name = readKeyName(iterator);
+                if (configKey.name.endsWith("\n")) {
+                    configKey.name = configKey.name.substring(0, configKey.name.length() - 1);
+                    configValue = "";
                 } else {
-                    configLine.value = readValue(iterator);
+                    configValue = readValue(iterator);
                 }
 
                 // Include another Git config file
-                if ("include".equalsIgnoreCase(configLine.section)) {
-                    entries.addAll(includeConfig(configLine, basePath, depth));
+                if ("include".equalsIgnoreCase(configKey.section)) {
+                    includeConfig(configKey, configValue, basePath, depth);
                 }
             } else {
-                throw new MatchingException("Invalid line in config file: " + configLine);
+                throw new MatchingException("Invalid line in config file: " + configKey);
             }
         }
+    }
 
-        return entries;
+    /**
+     * Adds the specified value to the list of values for the specified key.
+     *
+     * @param key Configuration key to which the specified value should be added
+     * @param value Value to add to the list of values for the key
+     */
+    private void addValue(final ConfigKey key, @Nullable final String value) {
+        if (key.section != null && key.name != null && value != null) {
+            this.configEntries.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
+        }
     }
 
     /**
      * Handles the inclusion of a Git configuration file into the current configuration file.
      *
-     * @param configLine Configuration file line containing the include directive
+     * @param configKey Configuration key containing the include directive
+     * @param configValue Configuration value for the key
      * @param basePath Path to resolve relative includes
      * @param depth Current recursive inclusion depth. Prevents unnecessarily deep or infinite inclusion.
-     * @return Included configuration lines
      * @throws MatchingException if there was a problem including the configuration file
      */
-    private static List<ConfigLine> includeConfig(final ConfigLine configLine, final Path basePath, final int depth)
-            throws MatchingException {
+    private void includeConfig(final ConfigKey configKey, @Nullable final String configValue,
+                               final Path basePath, final int depth) throws MatchingException {
         if (depth > MAX_DEPTH) {
             throw new MatchingException("Too many include recursions");
         }
 
-        if (!"path".equalsIgnoreCase(configLine.name) || configLine.value == null || configLine.value.isEmpty()) {
-            throw new MatchingException("Invalid line in config file: " + configLine);
+        if (!"path".equalsIgnoreCase(configKey.name) || configValue == null || configValue.isEmpty()) {
+            throw new MatchingException("Invalid line in config file: " + configKey);
         }
 
-        final String expandedPath = GitUtils.expandTilde(configLine.value);
+        final String expandedPath = GitUtils.expandTilde(configValue);
         final String config = readConfig(basePath.resolve(expandedPath));
-        return parse(config, basePath, depth + 1);
+        parse(config, basePath, depth + 1);
     }
 
     /**
@@ -459,7 +376,7 @@ final class GitConfig {
             }
         }
 
-        return name.toString();
+        return name.toString().toLowerCase(Locale.ROOT);
     }
 
     /**
@@ -574,7 +491,7 @@ final class GitConfig {
             }
         }
 
-        return name.toString();
+        return name.toString().toLowerCase(Locale.ROOT);
     }
 
     /**

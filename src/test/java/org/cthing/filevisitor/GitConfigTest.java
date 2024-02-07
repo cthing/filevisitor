@@ -129,7 +129,9 @@ public class GitConfigTest {
             final GitConfig config = new GitConfig(configFile("simple.txt"));
             assertThat(config.getString("user", "name")).isEqualTo("C Thing Software");
             assertThat(config.getString("user", "username")).isEqualTo("cthing");
+            assertThat(config.getString("USER", "username")).isEqualTo("cthing");
             assertThat(config.getString("user", "email")).isEqualTo("cthing@foobar.com");
+            assertThat(config.getString("user", "EMAIL")).isEqualTo("cthing@foobar.com");
             assertThat(config.getBoolean("user", "aligned", false)).isTrue();
             assertThat(config.getString("user", "junk")).isNull();
             assertThat(config.getString("missing", "email")).isNull();
