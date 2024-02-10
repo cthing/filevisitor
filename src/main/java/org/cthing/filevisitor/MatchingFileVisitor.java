@@ -58,12 +58,30 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
     private boolean excludeHidden;
     private boolean respectGitignore;
 
-    public MatchingFileVisitor(final MatchHandler handler, final String... matchPatterns) {
-        this(handler, List.of(matchPatterns));
+    /**
+     * Constructs a file system tree visitor.
+     *
+     * @param matchHandler Handler whose methods will be called when a file or directory is matched
+     * @param matchPatterns Glob patterns to match files and directories.
+     *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
+     *      Note that these patterns include files and directories rather than excluding them. As with Git
+     *      ignore files, patterns later in the list are matched first.
+     */
+    public MatchingFileVisitor(final MatchHandler matchHandler, final String... matchPatterns) {
+        this(matchHandler, List.of(matchPatterns));
     }
 
-    public MatchingFileVisitor(final MatchHandler handler, final List<String> matchPatterns) {
-        this.handler = handler;
+    /**
+     * Constructs a file system tree visitor.
+     *
+     * @param matchHandler Handler whose methods will be called when a file or directory is matched
+     * @param matchPatterns Glob patterns to match files and directories.
+     *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
+     *      Note that these patterns include files and directories rather than excluding them. As with Git
+     *      ignore files, patterns later in the list are matched first.
+     */
+    public MatchingFileVisitor(final MatchHandler matchHandler, final List<String> matchPatterns) {
+        this.handler = matchHandler;
         this.matchPatterns = matchPatterns;
         this.contextStack = new ArrayDeque<>();
         this.baseIgnores = new ArrayList<>();
@@ -71,11 +89,24 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         this.respectGitignore = true;
     }
 
+    /**
+     * Specifies whether to exclude hidden files during the visit.
+     *
+     * @param excludeHidden {@code true} to exclude hidden files
+     * @return This visitor
+     */
     public MatchingFileVisitor excludeHidden(final boolean excludeHidden) {
         this.excludeHidden = excludeHidden;
         return this;
     }
 
+    /**
+     * Specifies whether to honor Git ignore files to exclude files and directories from the visit. The default is
+     * {@code false}, which means to not honor Git ignore files.
+     *
+     * @param respectGitignore {@code true} to honor git ignore files during the walk
+     * @return This walker
+     */
     public MatchingFileVisitor respectGitignore(final boolean respectGitignore) {
         this.respectGitignore = respectGitignore;
         return this;
