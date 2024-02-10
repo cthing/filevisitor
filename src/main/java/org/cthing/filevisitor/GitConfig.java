@@ -97,9 +97,6 @@ final class GitConfig {
         }
     }
 
-    /** Global Git config. */
-    static final GitConfig CONFIG = findGlobalConfig();
-
     private static final int MAX_DEPTH = 10;
 
     private final Map<ConfigKey, List<String>> configEntries;

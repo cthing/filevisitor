@@ -28,6 +28,8 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
+import org.cthing.annotations.AccessForTesting;
+
 
 /**
  * Represents a collection of ignore patterns in the
@@ -40,7 +42,8 @@ final class GitIgnore {
      * Represents a match pattern from an ignore file. An ignore pattern consists of a glob matching pattern, the
      * location where the pattern was found, and additional information parsed from the ignore pattern.
      */
-    private static class Pattern {
+    @AccessForTesting
+    static class Pattern {
 
         private final String pattern;
         private final Glob glob;
@@ -54,11 +57,11 @@ final class GitIgnore {
             this.dirOnly = dirOnly;
         }
 
-        public boolean isNegated() {
+        boolean isNegated() {
             return this.negated;
         }
 
-        public boolean isDirOnly() {
+        boolean isDirOnly() {
             return this.dirOnly;
         }
 
@@ -68,7 +71,7 @@ final class GitIgnore {
          * @param relPath Path relative to the location of the ignore file containing this pattern
          * @return {@code true} if the specified path matches this pattern.
          */
-        public boolean matches(final Path relPath) {
+        boolean matches(final Path relPath) {
             return this.glob.matches(relPath);
         }
 
@@ -100,23 +103,53 @@ final class GitIgnore {
         NONE
     }
 
-    private static final boolean CASE_INSENSITIVE = GitConfig.CONFIG.getBoolean("core", "ignoreCase", false);
+
+    /**
+     * By default, Git is case-sensitive when working with ignore patterns. If the
+     * <a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreignoreCase">core.ignoreCase</a>
+     * configuration variable is {@code true}, Git will be case-insensitive when matching file patterns. Use the same
+     * variable to determine if glob matching in this library will be case-insensitive. As with Git, the default
+     * is to be case-sensitive.
+     */
+    private static final boolean CASE_INSENSITIVE = GitConfig.findGlobalConfig().getBoolean("core", "ignoreCase", false);
 
     private final Path root;
     private final List<Pattern> patterns;
 
+    /**
+     * Constructs a Git ignore based on the contents of the specified ignore file.
+     *
+     * @param root Path prefix to form relative references
+     * @param ignoreFile Git ignore file to read
+     * @throws MatchingException if there was a problem reading the specified Git ignore file.
+     */
     GitIgnore(final Path root, final Path ignoreFile) throws MatchingException {
         this(root);
 
         parse(ignoreFile);
+
+        // According to the gitignore documentation: "within one level of precedence,
+        // the last matching pattern decides the outcome".
+        Collections.reverse(this.patterns);
     }
 
-    GitIgnore(final Path root, final List<String> ignoreLines) throws MatchingException {
+    /**
+     * Constructs a Git ignore based on the specified ignore patterns.
+     *
+     * @param root Path prefix to form relative references
+     * @param ignorePatterns Git ignore patterns to parse
+     * @throws MatchingException if there was a problem parsing the specified ignore patterns.
+     */
+    GitIgnore(final Path root, final List<String> ignorePatterns) throws MatchingException {
         this(root);
 
-        for (final String ignoreLine : ignoreLines) {
+        for (final String ignoreLine : ignorePatterns) {
             parse(ignoreLine);
         }
+
+        // According to the gitignore documentation: "within one level of precedence,
+        // the last matching pattern decides the outcome".
+        Collections.reverse(this.patterns);
     }
 
     private GitIgnore(final Path root) {
@@ -124,14 +157,31 @@ final class GitIgnore {
         this.patterns = new ArrayList<>();
     }
 
+    @AccessForTesting
+    List<Pattern> getPatterns() {
+        return Collections.unmodifiableList(this.patterns);
+    }
+
+    /**
+     * Attempts to match the specified path with the patterns in this object.
+     *
+     * @param path Path to match against the patterns in this object
+     * @param isDir {@code true} if the specified path should be treated as a directory.
+     *      {@code false} if the specified path should be treated as a file.
+     * @return One of the following will be returned:
+     *      <ul>
+     *          <li>NONE - if no pattern matches the specified path</li>
+     *          <li>ALLOW - if a pattern matches the specified path and the path must be allowed</li>
+     *          <li>IGNORE - if a pattern matches the specified path and the path must be ignored</li>
+     *      </ul>
+     */
     @SuppressWarnings("Convert2streamapi")
-    MatchResult matches(final Path path) {
+    MatchResult matches(final Path path, final boolean isDir) {
         if (this.patterns.isEmpty()) {
             return MatchResult.NONE;
         }
 
-        final boolean isDir = Files.isDirectory(path);
-        final Path preparedPath = preparePath(path);
+        final Path preparedPath = preparePath(path, this.root);
 
         for (final Pattern pattern : this.patterns) {
             if (pattern.matches(preparedPath) && (!pattern.isDirOnly() || isDir)) {
@@ -142,9 +192,17 @@ final class GitIgnore {
         return MatchResult.NONE;
     }
 
+    /**
+     * Provides the global Git ignore patterns.
+     *
+     * @return Global Git ignore patterns or {@code null} if no global ignore patterns are found. The global
+     *      ignore file is search for according to the <a href="https://git-scm.com/docs/gitignore">gitignore</a>
+     *      documentation.
+     * @throws MatchingException if there is a problem reading the global ignore file.
+     */
     @Nullable
     static GitIgnore findGlobalIgnore() throws MatchingException {
-        final String excludesFile = GitConfig.CONFIG.getString("core", "excludesFile");
+        final String excludesFile = GitConfig.findGlobalConfig().getString("core", "excludesFile");
         if (excludesFile == null) {
             return null;
         }
@@ -155,20 +213,28 @@ final class GitIgnore {
         return new GitIgnore(parent, excludePath);
     }
 
+    /**
+     * Parses the specified ignore file into ignore patterns for use in matching.
+     *
+     * @param ignoreFile Git ignore file to parse
+     * @throws MatchingException if there is a problem parsing the file.
+     */
     private void parse(final Path ignoreFile) throws MatchingException {
         try (BufferedReader reader = Files.newBufferedReader(ignoreFile, StandardCharsets.UTF_8)) {
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                 parse(line);
             }
-
-            // According to the gitignore documentation: "within one level of precedence,
-            // the last matching pattern decides the outcome".
-            Collections.reverse(this.patterns);
         } catch (final IOException ex) {
             throw new MatchingException("Could not open ignore file: " + ignoreFile, ex);
         }
     }
 
+    /**
+     * Parses the specified ignore file line into an ignore pattern for use in matching.
+     *
+     * @param line Git ignore file line to parse
+     * @throws MatchingException if there is a problem parsing the line.
+     */
     private void parse(final String line) throws MatchingException {
         // Comment line
         if (line.startsWith("#")) {
@@ -235,9 +301,17 @@ final class GitIgnore {
         this.patterns.add(pattern);
     }
 
-    private String trimTrailing(final String str) {
+    /**
+     * Trims trailing whitespace from the specified string if that whitespace is not escaped. In Git
+     * ignore files, escaped trailing whitespace is preserved.
+     *
+     * @param str String whose trailing whitespace is to be removed
+     * @return String with unescaped trailing whitespace removed.
+     */
+    @AccessForTesting
+    static String trimTrailing(final String str) {
         if (str.isEmpty()) {
-            return "";
+            return str;
         }
 
         for (int i = str.length() - 1; i >= 0; i--) {
@@ -253,15 +327,17 @@ final class GitIgnore {
      * Prepares the specified path for relative pattern matching.
      *
      * @param path Path to be prepared
+     * @param rootPath Path prefix to remove to create relative paths
      * @return Path ready for relative pattern matching.
      */
-    private Path preparePath(final Path path) {
+    @AccessForTesting
+    static Path preparePath(final Path path, final Path rootPath) {
         // A leading "./" is unnecessary. It has already been removed from the gitignore root path,
         // and must be removed from the specified path as well. In addition, remove the root path
         // from the specified path so that relative matching works.
         final Path preparedPath = PathUtils.removePrefix("./", path);
 
         // Remove the root path from the specified path so that relative matching works.
-        return PathUtils.removePrefix(this.root, preparedPath);
+        return PathUtils.removePrefix(rootPath, preparedPath);
     }
 }

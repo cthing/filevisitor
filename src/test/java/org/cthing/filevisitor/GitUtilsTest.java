@@ -31,8 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class GitUtilsTest {
 
-    private static final String TEST_HOME_DIR = System.getProperty("cthing.filevisitor.home");
-    private static final Path TEST_HOME = Path.of(TEST_HOME_DIR);
+    static final String TEST_HOME_DIR = System.getProperty("cthing.filevisitor.home");
+    static final Path TEST_HOME = Path.of(TEST_HOME_DIR);
 
     @BeforeEach
     @SuppressWarnings("ResultOfMethodCallIgnored")

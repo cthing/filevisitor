@@ -301,10 +301,9 @@ final class Glob {
             assert star == '*';
 
             if (this.tokens.isEmpty()) {
-                if (this.iterator.peekNext() == '/') {
+                if (this.iterator.peekNext() == '/' || this.iterator.peekNext() < 0) {
                     this.tokens.addLast(new Token(TokenType.RecursivePrefix));
-                    final int sep = this.iterator.next();
-                    assert sep == '/';
+                    this.iterator.next();
                 } else {
                     this.tokens.addLast(new Token(TokenType.ZeroOrMore));
                     this.tokens.addLast(new Token(TokenType.ZeroOrMore));

@@ -152,12 +152,12 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         boolean allowed = false;
 
         if (this.respectGitignore) {
-            if (this.matcher != null && this.matcher.matches(dir) != GitIgnore.MatchResult.IGNORE) {
+            if (this.matcher != null && this.matcher.matches(dir, true) != GitIgnore.MatchResult.IGNORE) {
                 return SKIP_SUBTREE;
             }
             if (context.workTree) {
                 for (final GitIgnore ignore : context.ignores) {
-                    final GitIgnore.MatchResult result = ignore.matches(dir);
+                    final GitIgnore.MatchResult result = ignore.matches(dir, true);
                     if (result == GitIgnore.MatchResult.IGNORE) {
                         return SKIP_SUBTREE;
                     }
@@ -166,7 +166,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
                     }
                 }
                 for (final GitIgnore ignore : this.baseIgnores) {
-                    final GitIgnore.MatchResult result = ignore.matches(dir);
+                    final GitIgnore.MatchResult result = ignore.matches(dir, true);
                     if (result == GitIgnore.MatchResult.IGNORE) {
                         return SKIP_SUBTREE;
                     }
@@ -196,7 +196,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         final Context currentContext = this.contextStack.peekFirst();
         assert currentContext != null;
 
-        if (this.matcher != null && this.matcher.matches(file) != GitIgnore.MatchResult.IGNORE) {
+        if (this.matcher != null && this.matcher.matches(file, false) != GitIgnore.MatchResult.IGNORE) {
             return CONTINUE;
         }
 
@@ -205,7 +205,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         if (this.respectGitignore) {
             if (currentContext.workTree) {
                 for (final GitIgnore ignore : currentContext.ignores) {
-                    final GitIgnore.MatchResult result = ignore.matches(file);
+                    final GitIgnore.MatchResult result = ignore.matches(file, false);
                     if (result == GitIgnore.MatchResult.IGNORE) {
                         return CONTINUE;
                     }
@@ -214,7 +214,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
                     }
                 }
                 for (final GitIgnore ignore : this.baseIgnores) {
-                    final GitIgnore.MatchResult result = ignore.matches(file);
+                    final GitIgnore.MatchResult result = ignore.matches(file, false);
                     if (result == GitIgnore.MatchResult.IGNORE) {
                         return CONTINUE;
                     }
