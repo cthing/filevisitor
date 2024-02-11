@@ -25,6 +25,7 @@ import java.nio.file.attribute.BasicFileAttributes;
  * Called when a directory or file matches the patterns specified to {@link MatchingFileVisitor}.
  */
 @FunctionalInterface
+@SuppressWarnings("RedundantThrows")
 public interface MatchHandler {
 
     /**

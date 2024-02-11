@@ -16,32 +16,21 @@
 
 package org.cthing.filevisitor;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.cthing.filevisitor.TestHomeExtension.TEST_HOME;
+import static org.cthing.filevisitor.TestHomeExtension.TEST_HOME_DIR;
 
 
+@ExtendWith(TestHomeExtension.class)
 public class GitUtilsTest {
-
-    static final String TEST_HOME_DIR = System.getProperty("cthing.filevisitor.home");
-    static final Path TEST_HOME = Path.of(TEST_HOME_DIR);
-
-    @BeforeEach
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void setup() throws IOException {
-        if (Files.exists(TEST_HOME)) {
-            Files.walk(TEST_HOME).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
-        }
-        Files.createDirectories(TEST_HOME);
-    }
 
     @Nested
     class FindGlobalConfigFileTest {

@@ -37,7 +37,7 @@ import static java.nio.file.FileVisitResult.TERMINATE;
 /**
  * Performs pattern matching on the files in a file tree.
  */
-@SuppressWarnings("ParameterHidesMemberVariable")
+@SuppressWarnings({ "ParameterHidesMemberVariable", "UnusedReturnValue" })
 public final class MatchingFileVisitor implements FileVisitor<Path> {
 
     private static final class Context {
@@ -90,7 +90,8 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
     }
 
     /**
-     * Specifies whether to exclude hidden files during the visit.
+     * Specifies whether to exclude hidden files abd directories from the visit. By default, hidden files are
+     * excluded.
      *
      * @param excludeHidden {@code true} to exclude hidden files
      * @return This visitor
@@ -102,7 +103,8 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
 
     /**
      * Specifies whether to honor Git ignore files to exclude files and directories from the visit. The default is
-     * {@code false}, which means to not honor Git ignore files.
+     * {@code true}, which means to honor Git ignore files. If enabled, all parent ignore files, and any global
+     * ignore file is honored.
      *
      * @param respectGitignore {@code true} to honor git ignore files during the walk
      * @return This walker
@@ -116,10 +118,14 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
     public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
         boolean workTree = false;
 
+        // If the context stack is empty, this is start of the walk. Perform any initialization tasks.
         if (this.contextStack.isEmpty()) {
+            // Parse the patterns directly specified by the client. These are treated as allows rather than
+            // ignores.
             this.matcher = this.matchPatterns.isEmpty() ? null : new GitIgnore(dir, this.matchPatterns);
 
             if (this.respectGitignore) {
+                // Look for Git ignore files in the ancestor directories from the start directory.
                 final List<GitIgnore> ancesterIgnores = new ArrayList<>();
                 Path ancesterDir = dir.getParent();
                 while (ancesterDir != null) {
@@ -128,9 +134,12 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
                         ancesterIgnores.add(new GitIgnore(ancesterDir, ignoreFile));
                     }
 
+                    // If a .git directory is contained in an ancestor directory, consider
+                    // the current directory part of a Git work tree.
                     if (GitUtils.containsGitDir(ancesterDir)) {
                         workTree = true;
 
+                        // Look for a Git excludes file
                         final Path excludeFile = GitUtils.getExcludeFile(ancesterDir);
                         if (excludeFile != null) {
                             ancesterIgnores.add(new GitIgnore(ancesterDir, excludeFile));
@@ -144,6 +153,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
 
                 this.baseIgnores.addAll(ancesterIgnores);
 
+                // Look for global Git ignores.
                 final GitIgnore globalIgnore = GitIgnore.findGlobalIgnore();
                 if (globalIgnore != null) {
                     this.baseIgnores.add(globalIgnore);
@@ -154,14 +164,18 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         final Context context = new Context();
 
         if (this.respectGitignore) {
+            // Read any ignores in the current directory
             final Path ignoreFile = GitUtils.getGitignoreFile(dir);
             if (ignoreFile != null) {
                 context.ignores.add(new GitIgnore(dir, ignoreFile));
             }
 
+            // If a .git directory is contained in the current directory, consider
+            // the current directory part of a Git work tree.
             if (GitUtils.containsGitDir(dir)) {
                 workTree = true;
 
+                // Look for a Git excludes file
                 final Path excludeFile = GitUtils.getExcludeFile(dir);
                 if (excludeFile != null) {
                     context.ignores.add(new GitIgnore(dir, excludeFile));
@@ -182,10 +196,14 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
 
         boolean allowed = false;
 
+        // Skip the directory if the client pattern matches it. Note that client patterns are treated as
+        // inverse ignores.
+        if (this.matcher != null && this.matcher.matches(dir, true) == GitIgnore.MatchResult.ALLOW) {
+            return SKIP_SUBTREE;
+        }
+
         if (this.respectGitignore) {
-            if (this.matcher != null && this.matcher.matches(dir, true) != GitIgnore.MatchResult.IGNORE) {
-                return SKIP_SUBTREE;
-            }
+            // Only honor Git ignores if in a Git work tree.
             if (context.workTree) {
                 for (final GitIgnore ignore : context.ignores) {
                     final GitIgnore.MatchResult result = ignore.matches(dir, true);
@@ -212,9 +230,11 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
             return SKIP_SUBTREE;
         }
 
-        if (!this.handler.directory(dir, attrs)) {
-            this.contextStack.clear();
-            return TERMINATE;
+        if (this.matcher == null || this.matcher.matches(dir, true) == GitIgnore.MatchResult.IGNORE) {
+            if (!this.handler.directory(dir, attrs)) {
+                this.contextStack.clear();
+                return TERMINATE;
+            }
         }
 
         this.contextStack.push(context);
@@ -224,6 +244,10 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
 
     @Override
     public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
+        if (attrs.isDirectory()) {
+            return CONTINUE;
+        }
+
         final Context currentContext = this.contextStack.peekFirst();
         assert currentContext != null;
 
@@ -234,6 +258,7 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
         boolean allowed = false;
 
         if (this.respectGitignore) {
+            // Only honor Git ignores if in a Git work tree.
             if (currentContext.workTree) {
                 for (final GitIgnore ignore : currentContext.ignores) {
                     final GitIgnore.MatchResult result = ignore.matches(file, false);

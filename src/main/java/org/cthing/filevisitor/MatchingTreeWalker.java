@@ -67,7 +67,8 @@ public class MatchingTreeWalker {
     }
 
     /**
-     * Specifies whether to exclude hidden files from the walk.
+     * Specifies whether to exclude hidden files abd directories from the walk. By default, hidden files are
+     * excluded.
      *
      * @param excludeHidden {@code true} to exclude hidden files
      * @return This walker
@@ -79,7 +80,8 @@ public class MatchingTreeWalker {
 
     /**
      * Specifies whether to honor Git ignore files to exclude files and directories from the walk. The default is
-     * {@code false}, which means to not honor Git ignore files.
+     * {@code false}, which means to not honor Git ignore files. If enabled, all parent ignore files, and any global
+     * ignore file is honored.
      *
      * @param respectGitignore {@code true} to honor git ignore files during the walk
      * @return This walker
