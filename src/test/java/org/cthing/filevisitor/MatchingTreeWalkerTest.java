@@ -20,15 +20,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Set;
 
 import org.cthing.filevisitor.FileTreeExtension.FileTree;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -37,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 
 @ExtendWith({FileTreeExtension.class, TestHomeExtension.class})
 @SuppressWarnings("FieldMayBeFinal")
-public class MatchingFileVisitorTest {
+public class MatchingTreeWalkerTest {
 
     private CollectingMatchHandler handler = new CollectingMatchHandler();
 
@@ -48,11 +45,61 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Without Git, with hidden, no follow, without patterns")
         public void testPlane1(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            visitor.excludeHidden(false)
-                   .respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            walker.excludeHidden(false)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+                    fileTree.root,
+                    fileTree.dir1c,
+                    fileTree.file1e,
+                    fileTree.dir2d,
+                    fileTree.file2d,
+                    fileTree.file2c,
+                    fileTree.dir2e,
+                    fileTree.file2g,
+                    fileTree.dir3c,
+                    fileTree.file3d,
+                    fileTree.file2e,
+                    fileTree.file2f,
+                    fileTree.file1f,
+                    fileTree.file1d,
+                    fileTree.dir1b,
+                    fileTree.file1c,
+                    fileTree.dir2c,
+                    fileTree.dir3d,
+                    fileTree.file3c,
+                    fileTree.file3f,
+                    fileTree.file3e,
+                    fileTree.dir1a,
+                    fileTree.dir2a,
+                    fileTree.file2b,
+                    fileTree.gitIgnore2,
+                    fileTree.file2a,
+                    fileTree.file1b,
+                    fileTree.file1a,
+                    fileTree.dir2b,
+                    fileTree.dir3a,
+                    fileTree.dir3b,
+                    fileTree.file3b,
+                    fileTree.file3a,
+                    fileTree.link2a,
+                    fileTree.gitIgnore1,
+                    fileTree.gitDir
+            );
+        }
+
+        @Test
+        @DisplayName("Without Git, with hidden, explicit no follow, without patterns")
+        public void testPlane2(final FileTree fileTree) throws IOException {
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            walker.excludeHidden(false)
+                  .respectGitignore(false)
+                  .followLinks(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -94,12 +141,13 @@ public class MatchingFileVisitorTest {
 
         @Test
         @DisplayName("Without Git, without hidden, no follow, without patterns")
-        public void testPlane2(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+        public void testPlane3(final FileTree fileTree) throws IOException {
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -134,12 +182,14 @@ public class MatchingFileVisitorTest {
 
         @Test
         @DisplayName("Without Git, with hidden, follow links, without patterns")
-        public void testPlane3(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, Set.of(FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+        public void testPlane4(final FileTree fileTree) throws IOException {
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            walker.excludeHidden(false)
+                  .respectGitignore(false)
+                  .followLinks(true)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -186,12 +236,14 @@ public class MatchingFileVisitorTest {
 
         @Test
         @DisplayName("Limit depth")
-        public void testPlane4(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, Set.of(), 1, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+        public void testPlane5(final FileTree fileTree) throws IOException {
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            walker.excludeHidden(false)
+                  .respectGitignore(false)
+                  .maxDepth(1)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.gitIgnore1
             );
@@ -205,12 +257,13 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Literal pattern")
         public void testPattern1(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler,
-                                                                        "file2d.cpp");
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler,
+                                                                     "file2d.cpp");
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d
             );
         }
@@ -218,12 +271,13 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Literal patterns")
         public void testPattern2(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler,
-                                                                        "file2d.cpp", "dir2b");
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler,
+                                                                     "file2d.cpp", "dir2b");
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.dir2b
             );
@@ -232,12 +286,13 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Extension patterns")
         public void testPattern3(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler,
-                                                                        "*.java", "*.cpp");
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler,
+                                                                     "*.java", "*.cpp");
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.file2c,
                     fileTree.file2a,
@@ -248,12 +303,13 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Recursive patterns")
         public void testPattern4(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler,
-                                                                        "**/dir2d/**");
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler,
+                                                                     "**/dir2d/**");
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.file2c
             );
@@ -262,12 +318,13 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("Negated patterns")
         public void testPattern5(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler,
-                                                                        "**", "!**/dir2d");
-            visitor.excludeHidden(true);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler,
+                                                                     "**", "!**/dir2d");
+            walker.excludeHidden(true)
+                  .respectGitignore(false)
+                  .walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -305,9 +362,8 @@ public class MatchingFileVisitorTest {
         @Test
         @DisplayName("No ignores")
         public void testGit1(final FileTree fileTree) throws IOException {
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -345,9 +401,8 @@ public class MatchingFileVisitorTest {
         public void testGit2(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "**/dir2a/**");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -383,9 +438,8 @@ public class MatchingFileVisitorTest {
         public void testGit3(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore2, "*.txt\n!file2b.txt");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -424,9 +478,8 @@ public class MatchingFileVisitorTest {
             Files.writeString(fileTree.gitIgnore1, "**/dir3b/**");
             Files.writeString(fileTree.gitIgnore2, "*.txt");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -461,9 +514,8 @@ public class MatchingFileVisitorTest {
         public void testGit5(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "*.txt\n!**/file2b.txt");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -496,9 +548,8 @@ public class MatchingFileVisitorTest {
         public void testGit6(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "*.java\n!file3a.java");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.dir2b, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.dir3b,
@@ -515,9 +566,8 @@ public class MatchingFileVisitorTest {
             final Path excludeFile = Files.createFile(infoDir.resolve("exclude"));
             Files.writeString(excludeFile, "**/dir2a/**\n**/dir3b\n!**/file2a.java");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -553,9 +603,8 @@ public class MatchingFileVisitorTest {
             final Path excludeFile = Files.createFile(infoDir.resolve("exclude"));
             Files.writeString(excludeFile, "**/dir2a/**\n**/dir3b");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.dir2b, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.link2a
@@ -572,9 +621,8 @@ public class MatchingFileVisitorTest {
             final Path configFile = Files.createFile(TestHomeExtension.TEST_HOME.resolve(".gitconfig"));
             Files.writeString(configFile, "[core]\nexcludesFile = " + ignoreFile);
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.dir2b, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.dir3b,
@@ -588,9 +636,8 @@ public class MatchingFileVisitorTest {
         public void testGit10(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "**/dir2b\n*.txt\n!file2e.txt");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -617,9 +664,8 @@ public class MatchingFileVisitorTest {
         public void testGit11(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "*.java\n!file2a.java");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
+            new MatchingTreeWalker(fileTree.root, MatchingTreeWalkerTest.this.handler).walk();
+            assertThat(MatchingTreeWalkerTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -656,9 +702,9 @@ public class MatchingFileVisitorTest {
         public void testGit12(final FileTree fileTree) throws IOException {
             Files.writeString(fileTree.gitIgnore1, "[a-z");
 
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
-            assertThatExceptionOfType(MatchingException.class)
-                    .isThrownBy(() -> Files.walkFileTree(fileTree.root, visitor));
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root,
+                                                                     MatchingTreeWalkerTest.this.handler);
+            assertThatExceptionOfType(MatchingException.class).isThrownBy(walker::walk);
         }
     }
 
@@ -739,10 +785,7 @@ public class MatchingFileVisitorTest {
         @DisplayName("Terminate by file")
         public void testTerminateByFile(final FileTree fileTree) throws IOException {
             final TerminatingFileMatchHandler termHandler = new TerminatingFileMatchHandler(fileTree.file2b);
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(termHandler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
+            new MatchingTreeWalker(fileTree.root, termHandler).excludeHidden(false).respectGitignore(false).walk();
             assertThat(termHandler.getPaths()).last().isEqualTo(fileTree.file2b);
         }
 
@@ -750,10 +793,7 @@ public class MatchingFileVisitorTest {
         @DisplayName("Terminate by file")
         public void testTerminateByDir(final FileTree fileTree) throws IOException {
             final TerminatingDirMatchHandler termHandler = new TerminatingDirMatchHandler(fileTree.dir2b);
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(termHandler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            Files.walkFileTree(fileTree.root, visitor);
+            new MatchingTreeWalker(fileTree.root, termHandler).excludeHidden(false).respectGitignore(false).walk();
             assertThat(termHandler.getPaths()).last().isEqualTo(fileTree.dir2b);
         }
 
@@ -761,22 +801,20 @@ public class MatchingFileVisitorTest {
         @DisplayName("Terminate by file")
         public void testExceptionByFile(final FileTree fileTree) {
             final ExceptionFileMatchHandler termHandler = new ExceptionFileMatchHandler(fileTree.file2b);
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(termHandler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            assertThatIOException().isThrownBy(() -> Files.walkFileTree(fileTree.root, visitor))
-                                   .withMessageContaining("Expected");
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root, termHandler)
+                    .excludeHidden(false)
+                    .respectGitignore(false);
+            assertThatIOException().isThrownBy(walker::walk).withMessageContaining("Expected");
         }
 
         @Test
         @DisplayName("Terminate by file")
         public void testExceptionByDir(final FileTree fileTree) {
             final ExceptionDirMatchHandler termHandler = new ExceptionDirMatchHandler(fileTree.dir2b);
-            final MatchingFileVisitor visitor = new MatchingFileVisitor(termHandler);
-            visitor.excludeHidden(false);
-            visitor.respectGitignore(false);
-            assertThatIOException().isThrownBy(() -> Files.walkFileTree(fileTree.root, visitor))
-                                   .withMessageContaining("Expected");
+            final MatchingTreeWalker walker = new MatchingTreeWalker(fileTree.root, termHandler)
+                    .excludeHidden(false)
+                    .respectGitignore(false);
+            assertThatIOException().isThrownBy(walker::walk).withMessageContaining("Expected");
         }
     }
 }

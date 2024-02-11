@@ -21,11 +21,15 @@ import java.util.Arrays;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.aggregator.ArgumentsAccessor;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -43,6 +47,21 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 @SuppressWarnings("UnnecessaryUnicodeEscape")
 public class GlobTest {
+
+    @Test
+    public void testCharRangeEquality() {
+        EqualsVerifier.forClass(CharRange.class)
+                      .usingGetClass()
+                      .suppress(Warning.NONFINAL_FIELDS)
+                      .verify();
+    }
+
+    @Test
+    public void testTokenEquality() {
+        EqualsVerifier.forClass(Token.class)
+                      .usingGetClass()
+                      .verify();
+    }
 
     public static Stream<Arguments> parseProvider() {
         return Stream.of(
@@ -300,7 +319,14 @@ public class GlobTest {
     public void testMatching(final String pattern, final String path, final boolean caseInsensitive,
                              final boolean matches) throws MatchingException {
         final Glob glob = new Glob(pattern, caseInsensitive);
+        assertThat(glob.getPattern()).isEqualTo(pattern);
+        assertThat(glob).hasToString(pattern);
         assertThat(glob.matches(Path.of(path))).isEqualTo(matches);
+    }
+
+    @Test
+    public void testBadEscape() {
+        assertThatExceptionOfType(MatchingException.class).isThrownBy(() -> new Glob("abc\\"));
     }
 
     private static Token token(final TokenType type) {

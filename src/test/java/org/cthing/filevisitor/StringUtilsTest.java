@@ -16,12 +16,15 @@
 
 package org.cthing.filevisitor;
 
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 
 public class StringUtilsTest {
 
+    @Test
     public void testToBoolean() {
         assertThat(StringUtils.toBoolean("true")).isTrue();
         assertThat(StringUtils.toBoolean("TRUE")).isTrue();

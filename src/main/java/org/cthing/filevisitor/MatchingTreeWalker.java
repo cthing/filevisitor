@@ -63,7 +63,7 @@ public class MatchingTreeWalker {
         this.start = start;
         this.visitor = new MatchingFileVisitor(matchHandler, matchPatterns);
         this.maxDepth = Integer.MAX_VALUE;
-        this.fileVisitOptions = EnumSet.allOf(FileVisitOption.class);
+        this.fileVisitOptions = EnumSet.noneOf(FileVisitOption.class);
     }
 
     /**
