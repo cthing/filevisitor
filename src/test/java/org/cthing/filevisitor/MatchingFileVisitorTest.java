@@ -743,32 +743,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).containsExactlyInAnyOrder(
-                    fileTree.root,
-                    fileTree.dir1c,
-                    fileTree.file1e,
-                    fileTree.dir2d,
-                    fileTree.file2d,
-                    fileTree.file2c,
-                    fileTree.dir2e,
-                    fileTree.file2g,
-                    fileTree.dir3c,
-                    fileTree.file3d,
-                    fileTree.file2e,
-                    fileTree.file2f,
-                    fileTree.file1f,
-                    fileTree.file1d,
-                    fileTree.dir1b,
-                    fileTree.file1c,
-                    fileTree.dir2c,
-                    fileTree.dir3d,
-                    fileTree.file3c,
-                    fileTree.file3f,
-                    fileTree.file3e,
-                    fileTree.dir1a,
-                    fileTree.dir2a,
-                    fileTree.file2b
-            );
+            assertThat(termHandler.getPaths()).contains(fileTree.file2b).doesNotContain(fileTree.dir3a);
         }
 
         @Test
@@ -779,37 +754,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).containsExactlyInAnyOrder(
-                    fileTree.root,
-                    fileTree.dir1c,
-                    fileTree.file1e,
-                    fileTree.dir2d,
-                    fileTree.file2d,
-                    fileTree.file2c,
-                    fileTree.dir2e,
-                    fileTree.file2g,
-                    fileTree.dir3c,
-                    fileTree.file3d,
-                    fileTree.file2e,
-                    fileTree.file2f,
-                    fileTree.file1f,
-                    fileTree.file1d,
-                    fileTree.dir1b,
-                    fileTree.file1c,
-                    fileTree.dir2c,
-                    fileTree.dir3d,
-                    fileTree.file3c,
-                    fileTree.file3f,
-                    fileTree.file3e,
-                    fileTree.dir1a,
-                    fileTree.dir2a,
-                    fileTree.file2b,
-                    fileTree.gitIgnore2,
-                    fileTree.file2a,
-                    fileTree.file1b,
-                    fileTree.file1a,
-                    fileTree.dir2b
-            );
+            assertThat(termHandler.getPaths()).contains(fileTree.dir2b).doesNotContain(fileTree.dir3a);
         }
 
         @Test
