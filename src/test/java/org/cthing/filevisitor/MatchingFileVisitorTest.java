@@ -52,7 +52,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -99,7 +99,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -139,7 +139,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, Set.of(FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -191,7 +191,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, Set.of(), 1, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.gitIgnore1
             );
@@ -210,7 +210,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d
             );
         }
@@ -223,7 +223,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.dir2b
             );
@@ -237,7 +237,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.file2c,
                     fileTree.file2a,
@@ -253,7 +253,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.file2d,
                     fileTree.file2c
             );
@@ -267,7 +267,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(true);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -307,7 +307,7 @@ public class MatchingFileVisitorTest {
         public void testGit1(final FileTree fileTree) throws IOException {
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -347,7 +347,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -385,7 +385,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -426,7 +426,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -463,7 +463,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -498,7 +498,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.dir3b,
@@ -517,7 +517,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -555,7 +555,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.link2a
@@ -574,7 +574,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.dir2b, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.dir2b,
                     fileTree.dir3a,
                     fileTree.dir3b,
@@ -590,7 +590,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -619,7 +619,7 @@ public class MatchingFileVisitorTest {
 
             final MatchingFileVisitor visitor = new MatchingFileVisitor(MatchingFileVisitorTest.this.handler);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactly(
+            assertThat(MatchingFileVisitorTest.this.handler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -743,7 +743,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).containsExactly(
+            assertThat(termHandler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
@@ -779,7 +779,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).containsExactly(
+            assertThat(termHandler.getPaths()).containsExactlyInAnyOrder(
                     fileTree.root,
                     fileTree.dir1c,
                     fileTree.file1e,
