@@ -743,7 +743,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).contains(fileTree.file2b).doesNotContain(fileTree.dir3a);
+            assertThat(termHandler.getPaths()).last().isEqualTo(fileTree.file2b);
         }
 
         @Test
@@ -754,7 +754,7 @@ public class MatchingFileVisitorTest {
             visitor.excludeHidden(false);
             visitor.respectGitignore(false);
             Files.walkFileTree(fileTree.root, visitor);
-            assertThat(termHandler.getPaths()).contains(fileTree.dir2b).doesNotContain(fileTree.dir3a);
+            assertThat(termHandler.getPaths()).last().isEqualTo(fileTree.dir2b);
         }
 
         @Test
