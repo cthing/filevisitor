@@ -36,6 +36,13 @@ public class CollectingMatchHandler implements MatchHandler {
         this.paths = new ArrayList<>();
     }
 
+    /**
+     * Obtains the files and directories encountered during a file tree walk. Note that the order of files
+     * and directories in the list reflects the order in which they were reported by the file system. Therefore,
+     * the order may change on subsequent invocations of the walk or when invoked on different machines.
+     *
+     * @return Files and directories encountered during the file tree walk.
+     */
     public List<Path> getPaths() {
         return Collections.unmodifiableList(this.paths);
     }
