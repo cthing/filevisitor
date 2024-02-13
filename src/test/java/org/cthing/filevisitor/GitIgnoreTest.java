@@ -68,7 +68,7 @@ public class GitIgnoreTest {
     }
 
     @Nested
-    class GlocalIgnoreTest {
+    class LocalIgnoreTest {
 
         @Test
         public void testNoConfig() throws MatchingException {

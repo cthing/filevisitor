@@ -25,7 +25,8 @@ import java.util.List;
 
 
 /**
- * Convenience wrapper around {@link java.nio.file.Files#walkFileTree}.
+ * Convenience wrapper around {@link java.nio.file.Files#walkFileTree} and {@link MatchingFileVisitor} to perform
+ * pattern matching on the files in a file tree.
  */
 @SuppressWarnings("ParameterHidesMemberVariable")
 public class MatchingTreeWalker {
@@ -43,7 +44,8 @@ public class MatchingTreeWalker {
      * @param matchPatterns Glob patterns to match files and directories.
      *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
      *      Note that these patterns include files and directories rather than excluding them. As with Git
-     *      ignore files, patterns later in the list are matched first.
+     *      ignore files, patterns later in the list are matched first. If no patterns are specified, all
+     *      files and directories are considered a match.
      */
     public MatchingTreeWalker(final Path start, final MatchHandler matchHandler, final String... matchPatterns) {
         this(start, matchHandler, List.of(matchPatterns));
@@ -57,7 +59,8 @@ public class MatchingTreeWalker {
      * @param matchPatterns Glob patterns to match files and directories.
      *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
      *      Note that these patterns include files and directories rather than excluding them. As with Git
-     *      ignore files, patterns later in the list are matched first.
+     *      ignore files, patterns later in the list are matched first. If no patterns are specified, all
+     *      files and directories are considered a match.
      */
     public MatchingTreeWalker(final Path start, final MatchHandler matchHandler, final List<String> matchPatterns) {
         this.start = start;
@@ -92,9 +95,10 @@ public class MatchingTreeWalker {
     }
 
     /**
-     * Specifies a maximum depth for the walk. The default is zero, which means that there is no depth limit.
+     * Specifies a maximum depth for the walk. The default is {@link Integer#MAX_VALUE}, which means that there is
+     * no depth limit.
      *
-     * @param maxDepth Maximum tree depth for the walk
+     * @param maxDepth Maximum tree depth for the walk or {@link Integer#MAX_VALUE} for unlimited depth
      * @return This walker
      */
     public MatchingTreeWalker maxDepth(final int maxDepth) {

@@ -31,9 +31,23 @@ import java.util.List;
 public class CollectingMatchHandler implements MatchHandler {
 
     final List<Path> paths;
+    final boolean includeDirectories;
 
+    /**
+     * Constructs a collecting matcher. By default, directories as well as files are collected.
+     */
     public CollectingMatchHandler() {
+        this(true);
+    }
+
+    /**
+     * Constructs a collecting matcher.
+     *
+     * @param includeDirectories {@code true} to include directories in the collection.
+     */
+    public CollectingMatchHandler(final boolean includeDirectories) {
         this.paths = new ArrayList<>();
+        this.includeDirectories = includeDirectories;
     }
 
     /**
@@ -55,7 +69,9 @@ public class CollectingMatchHandler implements MatchHandler {
 
     @Override
     public boolean directory(final Path dir, final BasicFileAttributes attrs) {
-        this.paths.add(dir);
+        if (this.includeDirectories) {
+            this.paths.add(dir);
+        }
         return true;
     }
 }

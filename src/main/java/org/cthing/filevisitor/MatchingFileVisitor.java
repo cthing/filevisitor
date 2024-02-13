@@ -35,7 +35,10 @@ import static java.nio.file.FileVisitResult.TERMINATE;
 
 
 /**
- * Performs pattern matching on the files in a file tree.
+ * An implementation of the Java {@link FileVisitor} interface that performs pattern matching on the files in a
+ * file tree. Instances of this class can be passed into {@link Files#walkFileTree} to perform
+ * glob pattern matching on the visited files and directories. The {@link MatchingTreeWalker} class can be used as
+ * a convenient alternative to creating an instance of this class and passing it to {@link Files#walkFileTree}.
  */
 @SuppressWarnings({ "ParameterHidesMemberVariable", "UnusedReturnValue" })
 public final class MatchingFileVisitor implements FileVisitor<Path> {
@@ -65,7 +68,8 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
      * @param matchPatterns Glob patterns to match files and directories.
      *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
      *      Note that these patterns include files and directories rather than excluding them. As with Git
-     *      ignore files, patterns later in the list are matched first.
+     *      ignore files, patterns specified later are tested first. If no patterns are specified, all
+     *      files and directories are considered a match.
      */
     public MatchingFileVisitor(final MatchHandler matchHandler, final String... matchPatterns) {
         this(matchHandler, List.of(matchPatterns));
@@ -78,7 +82,8 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
      * @param matchPatterns Glob patterns to match files and directories.
      *      See <a href="https://git-scm.com/docs/gitignore">git-ignore</a> for the format of these patterns.
      *      Note that these patterns include files and directories rather than excluding them. As with Git
-     *      ignore files, patterns later in the list are matched first.
+     *      ignore files, patterns later in the list are tested first. If no patterns are specified, all
+     *      files and directories are considered a match.
      */
     public MatchingFileVisitor(final MatchHandler matchHandler, final List<String> matchPatterns) {
         this.handler = matchHandler;
