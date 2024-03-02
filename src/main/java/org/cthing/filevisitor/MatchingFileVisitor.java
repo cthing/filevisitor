@@ -95,8 +95,8 @@ public final class MatchingFileVisitor implements FileVisitor<Path> {
     }
 
     /**
-     * Specifies whether to exclude hidden files abd directories from the visit. By default, hidden files are
-     * excluded.
+     * Specifies whether to exclude hidden files and directories from the visit. By default, hidden files and
+     * directories are excluded.
      *
      * @param excludeHidden {@code true} to exclude hidden files
      * @return This visitor
