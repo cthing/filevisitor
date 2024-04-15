@@ -1,5 +1,9 @@
 # ![C Thing Software](https://www.cthing.com/branding/CThingSoftware-57x60.png "C Thing Software") filevisitor
 
+[![CI](https://github.com/cthing/filevisitor/actions/workflows/ci.yml/badge.svg)](https://github.com/cthing/filevisitor/actions/workflows/ci.yml)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.cthing/filevisitor/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.cthing/filevisitor)
+[![javadoc](https://javadoc.io/badge2/org.cthing/filevisitor/javadoc.svg)](https://javadoc.io/doc/org.cthing/filevisitor)
+
 A Java library providing glob pattern matching traversal of the file system. In addition to pattern matching,
 Git ignore files can be honored.
 
