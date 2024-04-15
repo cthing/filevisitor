@@ -19,7 +19,7 @@ plugins {
     alias(libs.plugins.versions)
 }
 
-val baseVersion = "0.1.0"
+val baseVersion = "1.0.0"
 val isSnapshot = true
 
 val isCIServer = System.getenv("CTHING_CI") != null

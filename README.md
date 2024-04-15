@@ -1,7 +1,7 @@
 # ![C Thing Software](https://www.cthing.com/branding/CThingSoftware-57x60.png "C Thing Software") filevisitor
 
 A Java library providing glob pattern matching traversal of the file system. In addition to pattern matching,
-Git ignore file can be honored.
+Git ignore files can be honored.
 
 ## Usage
 The library is available from [Maven Central](https://repo.maven.apache.org/maven2/org/cthing/filevisitor/) using
@@ -58,8 +58,8 @@ final List<Path> matchedPaths = handler.getPaths();
 
 ### Pattern Matching Syntax
 Patterns to match files and directories use the [Git ignore](https://git-scm.com/docs/gitignore#_pattern_format)
-glob syntax. Note that unlike Git ignore globs, which indicate which files and directories to exclude, in this
-library, they indicate which files and directories to include. For example, specifying `**/*.java` includes
+glob syntax. Note that unlike Git ignore globs, which indicate the files and directories to exclude, in this
+library, they indicate the files and directories to include. For example, specifying `**/*.java` includes
 all Java files in any directory. To exclude files and directories, use the "!" negation prefix. Below is summary
 of the glob syntax. See the [Git ignore](https://git-scm.com/docs/gitignore#_pattern_format) documentation for a
 detailed explanation.
@@ -81,8 +81,8 @@ detailed explanation.
 ### Git Ignore Files
 By default, file tree traversal respects [Git ignore files](https://git-scm.com/docs/gitignore). If the start directory
 is anywhere within a Git work tree, any Git ignore files will be used to exclude files from matching. Global Git
-ignore files are also considered. User specified match patterns have higher precedence than Git ignore patterns.
-Git ignore files have the same precedence as they do in Git.
+ignore files are also considered. Git ignore files have the same precedence as they do in Git. User specified match
+patterns have higher precedence than Git ignore patterns.
 
 To disable the use of Git ignore files, call the `MatchingTreeWalker.respectGitignore` or
 `MatchingFileVisitor.respectGitignore` method with `false`.
