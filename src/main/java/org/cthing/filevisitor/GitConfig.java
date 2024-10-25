@@ -30,9 +30,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import org.cthing.annotations.AccessForTesting;
+import org.jspecify.annotations.Nullable;
 
 
 /**

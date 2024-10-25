@@ -22,7 +22,7 @@ final class RegexUtils {
      *
      * @param ch Character to escape
      * @return If the specified character has special meaning in a regular expression, it is escaped. If the
-     *      character is not printable, it is unicode escaped.
+     *      character is not printable, it is Unicode escaped.
      */
     static String escape(final char ch) {
         return switch (ch) {
@@ -36,7 +36,7 @@ final class RegexUtils {
      *
      * @param ch Character to escape
      * @return If the specified character has special meaning in a regular expression character class, it is escaped.
-     *      If the character is not printable, it is unicode escaped.
+     *      If the character is not printable, it is Unicode escaped.
      */
     static String escapeCharClass(final char ch) {
         return switch (ch) {
@@ -49,7 +49,7 @@ final class RegexUtils {
      * Escapes non-printable characters.
      *
      * @param ch Character to escape
-     * @return If the specified character is not printable, it is unicode escaped.
+     * @return If the specified character is not printable, it is Unicode escaped.
      */
     private static String escapeNonPrintable(final char ch) {
         return (ch < 32 || ch > 126) ? String.format("\\u%04x", (int)ch) : String.valueOf(ch);

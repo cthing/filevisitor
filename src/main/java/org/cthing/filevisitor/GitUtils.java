@@ -8,9 +8,8 @@ package org.cthing.filevisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import javax.annotation.Nullable;
-
 import org.cthing.annotations.NoCoverageGenerated;
+import org.jspecify.annotations.Nullable;
 
 
 /**

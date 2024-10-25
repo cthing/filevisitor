@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 @SuppressWarnings("FieldMayBeFinal")
 public class MatchingTreeWalkerTest {
 
-    private CollectingMatchHandler handler = new CollectingMatchHandler();
+    private final CollectingMatchHandler handler = new CollectingMatchHandler();
 
     @Nested
     @DisplayName("Plane traversal")

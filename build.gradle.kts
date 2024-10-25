@@ -28,7 +28,7 @@ plugins {
     alias(libs.plugins.versions)
 }
 
-version = ProjectVersion("1.0.1", BuildType.snapshot)
+version = ProjectVersion("2.0.0", BuildType.snapshot)
 group = "org.cthing"
 description = "An implementation of the Java FileVisitor with Glob pattern matching and more."
 
@@ -39,9 +39,9 @@ java {
 }
 
 dependencies {
-    api(libs.jsr305)
+    api(libs.jspecify)
 
-    implementation(libs.cthingAnnots)
+    compileOnly(libs.cthingAnnots)
 
     testImplementation(libs.assertJ)
     testImplementation(libs.equalsVerifier)

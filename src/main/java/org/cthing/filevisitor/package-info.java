@@ -6,7 +6,7 @@
 /**
  * Classes for matching files while traversing a file tree.
  */
-@PackageNonnullByDefault
+@NullMarked
 package org.cthing.filevisitor;
 
-import org.cthing.annotations.PackageNonnullByDefault;
+import org.jspecify.annotations.NullMarked;
