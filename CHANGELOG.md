@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [2.0.0] - 2024-10-25
+
 ### Changed
 
-- Use cthing-projectversion library `ProjectVersion` object for project version
+- The library has been migrated from JSR 305 to [JSpecify](https://jspecify.dev/) for `null` checking
+- The build now uses the [dependency-analysis-gradle-plugin](https://github.com/autonomousapps/dependency-analysis-gradle-plugin)
 
 ## [1.0.0] - 2024-04-14
 
@@ -17,5 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First release
 
-[unreleased]: https://github.com/cthing/filevisitor/compare/1.0.0...HEAD
+[unreleased]: https://github.com/cthing/filevisitor/compare/2.0.0...HEAD
+[2.0.0]: https://github.com/cthing/filevisitor/releases/tag/2.0.0
 [1.0.0]: https://github.com/cthing/filevisitor/releases/tag/1.0.0

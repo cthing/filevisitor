@@ -14,12 +14,12 @@ the following Maven dependency:
 <dependency>
   <groupId>org.cthing</groupId>
   <artifactId>filevisitor</artifactId>
-  <version>1.0.0</version>
+  <version>2.0.0</version>
 </dependency>
 ```
 or the following Gradle dependency:
 ```kotlin
-implementation("org.cthing:filevisitor:1.0.0")
+implementation("org.cthing:filevisitor:2.0.0")
 ```
 
 ### File Tree Traversal

@@ -28,7 +28,7 @@ plugins {
     alias(libs.plugins.versions)
 }
 
-version = ProjectVersion("2.0.0", BuildType.release)
+version = ProjectVersion("2.0.1", BuildType.snapshot)
 group = "org.cthing"
 description = "An implementation of the Java FileVisitor with Glob pattern matching and more."
 
