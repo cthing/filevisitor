@@ -1,7 +1,7 @@
 # ![C Thing Software](https://www.cthing.com/branding/CThingSoftware-57x60.png "C Thing Software") filevisitor
 
 [![CI](https://github.com/cthing/filevisitor/actions/workflows/ci.yml/badge.svg)](https://github.com/cthing/filevisitor/actions/workflows/ci.yml)
-[![Maven Central Version](https://img.shields.io/maven-central/v/org.cthing/filevisitor)](https://maven-badges.herokuapp.com/maven-central/org.cthing/filevisitor)
+[![Maven Central Version](https://img.shields.io/maven-central/v/org.cthing/filevisitor)](https://central.sonatype.com/artifact/org.cthing/filevisitor)
 [![javadoc](https://javadoc.io/badge2/org.cthing/filevisitor/javadoc.svg)](https://javadoc.io/doc/org.cthing/filevisitor)
 
 A Java library providing glob pattern matching traversal of the file system. In addition to pattern matching,
